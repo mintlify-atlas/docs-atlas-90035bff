@@ -1,0 +1,777 @@
+---
+title: 'Installation'
+description: 'Complete installation guide for Hub platform'
+---
+
+This comprehensive guide covers all installation options for the Hub platform, from local development to production deployment.
+
+## System Requirements
+
+### Minimum Requirements
+
+<CardGroup cols={2}>
+  <Card title="Development Environment" icon="laptop-code">
+    - **OS**: Linux, macOS, or Windows (with WSL2)
+    - **RAM**: 8GB minimum, 16GB recommended
+    - **Storage**: 10GB free space
+    - **Docker**: Version 20.10+
+    - **Docker Compose**: v2.0+
+  </Card>
+
+  <Card title="Production Environment" icon="server">
+    - **RAM**: 16GB minimum
+    - **CPU**: 4 cores minimum
+    - **Storage**: 50GB+ SSD recommended
+    - **OS**: Ubuntu 22.04 LTS or similar
+    - **Network**: Static IP recommended
+  </Card>
+</CardGroup>
+
+## Tech Stack Overview
+
+Hub is built with modern technologies for scalability and performance:
+
+<CodeGroup>
+
+```yaml Backend
+Framework: Spring Boot 3.5.10
+Language: Java 21
+Build Tool: Maven 3.9
+Database: PostgreSQL 16 with PostGIS 3.4
+Authentication: OAuth2 + JWT (Auth0)
+Image Storage: Cloudinary
+Email Service: Brevo
+API Documentation: SpringDoc OpenAPI 3
+```
+
+```yaml Frontend
+Framework: Next.js 16.1.6
+UI Library: React 19.2.3
+Language: TypeScript 5.9
+Styling: Tailwind CSS 4.2
+UI Components: Radix UI + shadcn/ui
+Authentication: Auth0 Next.js SDK 4.15
+State Management: React Hook Form + Zod
+Maps: Leaflet 1.9
+```
+
+```yaml Infrastructure
+Container Runtime: Docker
+Orchestration: Docker Compose
+Database Admin: pgAdmin 4
+Reverse Proxy: (configurable)
+SSL/TLS: (production setup)
+```
+
+</CodeGroup>
+
+## Installation Methods
+
+<Tabs>
+  <Tab title="Docker (Recommended)">
+    The easiest way to get started is using Docker Compose.
+
+    ### Prerequisites
+
+    <Steps>
+      <Step title="Install Docker">
+        Install Docker Desktop or Docker Engine:
+
+        <CodeGroup>
+
+        ```bash macOS
+        # Using Homebrew
+        brew install --cask docker
+
+        # Or download from Docker website
+        # https://www.docker.com/products/docker-desktop
+        ```
+
+        ```bash Ubuntu/Debian
+        # Update package index
+        sudo apt-get update
+
+        # Install prerequisites
+        sudo apt-get install ca-certificates curl gnupg
+
+        # Add Docker's official GPG key
+        sudo install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+        # Set up repository
+        echo \
+          "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+          "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+          sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+        # Install Docker Engine
+        sudo apt-get update
+        sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+        ```
+
+        ```bash Windows (WSL2)
+        # Download and install Docker Desktop for Windows
+        # https://www.docker.com/products/docker-desktop
+
+        # Ensure WSL2 backend is enabled in Docker Desktop settings
+        ```
+
+        </CodeGroup>
+
+        Verify installation:
+        ```bash
+        docker --version
+        docker compose version
+        ```
+      </Step>
+
+      <Step title="Clone the Repository">
+        ```bash
+        git clone <repository-url>
+        cd hub
+        ```
+      </Step>
+
+      <Step title="Configure Environment">
+        Create a `.env` file in the project root:
+
+        ```bash .env
+        # Database Configuration
+        POSTGRES_DB=hub
+        POSTGRES_USER=hub_user
+        POSTGRES_PASSWORD=your_secure_password_here
+        DB_HOST=postgres
+        DB_PORT=5432
+
+        # Backend Configuration
+        BACKEND_PORT=8080
+
+        # Auth0 Configuration
+        AUTH0_ISSUER=https://your-tenant.auth0.com/
+        AUTH0_AUDIENCE=https://api.yourdomain.com
+
+        # Cloudinary Configuration
+        CLOUDINARY_CLOUD_NAME=your_cloud_name
+        CLOUDINARY_API_KEY=your_api_key
+        CLOUDINARY_API_SECRET=your_api_secret
+
+        # Email Configuration
+        MAIL_USERNAME=your_brevo_email
+        MAIL_PASSWORD=your_brevo_smtp_key
+        APP_MAIL_FROM=noreply@padelhub.com
+
+        # Application Configuration
+        APP_ADMIN_EMAIL=admin@yourdomain.com
+        APP_FRONTEND_URL=http://localhost:3000
+        ```
+
+        <Warning>
+        Replace all placeholder values with your actual configuration. Never commit `.env` files to version control.
+        </Warning>
+      </Step>
+
+      <Step title="Start Services">
+        Launch all services with Docker Compose:
+
+        ```bash
+        # Start in detached mode
+        docker compose up -d
+
+        # View logs
+        docker compose logs -f
+
+        # Check service status
+        docker compose ps
+        ```
+
+        The following services will start:
+        - **PostgreSQL**: `localhost:5432`
+        - **Spring Boot Backend**: `localhost:8080`
+        - **pgAdmin**: `localhost:5050`
+      </Step>
+
+      <Step title="Verify Database">
+        Check that the database is ready and migrations have run:
+
+        ```bash
+        # Access database shell
+        docker compose exec postgres psql -U hub_user -d hub
+
+        # In psql, list tables
+        \dt
+
+        # Check PostGIS extension
+        SELECT PostGIS_version();
+
+        # Exit psql
+        \q
+        ```
+
+        You should see tables for venues, bookings, users, resources, payments, and match requests.
+      </Step>
+    </Steps>
+
+    ### Configure Frontend
+
+    <Steps>
+      <Step title="Navigate to Frontend">
+        ```bash
+        cd frontend/sports-hub-frontend
+        ```
+      </Step>
+
+      <Step title="Create Environment File">
+        Create `.env.local`:
+
+        ```bash .env.local
+        # Auth0 Configuration
+        AUTH0_SECRET=generate_32_byte_random_string
+        AUTH0_BASE_URL=http://localhost:3000
+        AUTH0_ISSUER_BASE_URL=https://your-tenant.auth0.com
+        AUTH0_CLIENT_ID=your_auth0_client_id
+        AUTH0_CLIENT_SECRET=your_auth0_client_secret
+        AUTH0_AUDIENCE=https://api.yourdomain.com
+        AUTH0_DOMAIN=your-tenant.auth0.com
+
+        # Backend API
+        NEXT_PUBLIC_API_URL=http://localhost:8080
+        ```
+
+        <Tip>
+        Generate `AUTH0_SECRET`: `openssl rand -hex 32`
+        </Tip>
+      </Step>
+
+      <Step title="Install Dependencies">
+        ```bash
+        npm install
+        ```
+
+        This installs all required packages including:
+        - Next.js 16 and React 19
+        - Auth0 Next.js SDK
+        - Radix UI components
+        - Tailwind CSS
+        - TypeScript
+      </Step>
+
+      <Step title="Start Development Server">
+        ```bash
+        npm run dev
+        ```
+
+        The frontend will be available at `http://localhost:3000`
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Local Development">
+    Run the backend and frontend locally without Docker (requires Java 21 and Node.js).
+
+    ### Backend Setup
+
+    <Steps>
+      <Step title="Install Java 21">
+        <CodeGroup>
+
+        ```bash macOS
+        # Using Homebrew
+        brew install openjdk@21
+
+        # Add to PATH
+        echo 'export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"' >> ~/.zshrc
+        source ~/.zshrc
+        ```
+
+        ```bash Ubuntu
+        # Install OpenJDK 21
+        sudo apt update
+        sudo apt install openjdk-21-jdk
+
+        # Verify installation
+        java -version
+        ```
+
+        ```bash Windows
+        # Download from Adoptium
+        # https://adoptium.net/temurin/releases/?version=21
+        
+        # Or use Chocolatey
+        choco install openjdk21
+        ```
+
+        </CodeGroup>
+      </Step>
+
+      <Step title="Start PostgreSQL">
+        Start PostgreSQL with PostGIS using Docker:
+
+        ```bash
+        docker compose up -d postgres
+        ```
+
+        Or install PostgreSQL 16 locally with the PostGIS extension.
+      </Step>
+
+      <Step title="Configure Backend Environment">
+        Set environment variables in your shell or IDE:
+
+        ```bash
+        export DB_HOST=localhost
+        export DB_PORT=5432
+        export DB_NAME=hub
+        export DB_USER=hub_user
+        export DB_PASSWORD=your_password
+        export AUTH0_ISSUER=https://your-tenant.auth0.com/
+        export AUTH0_AUDIENCE=https://api.yourdomain.com
+        export CLOUDINARY_CLOUD_NAME=your_cloud_name
+        export CLOUDINARY_API_KEY=your_api_key
+        export CLOUDINARY_API_SECRET=your_api_secret
+        export MAIL_USERNAME=your_email
+        export MAIL_PASSWORD=your_password
+        export APP_ADMIN_EMAIL=admin@yourdomain.com
+        export APP_MAIL_FROM=noreply@padelhub.com
+        export APP_FRONTEND_URL=http://localhost:3000
+        ```
+      </Step>
+
+      <Step title="Run Backend">
+        ```bash
+        cd backend
+
+        # Run with Maven wrapper
+        ./mvnw spring-boot:run
+
+        # Or build and run JAR
+        ./mvnw clean package
+        java -jar target/backend-0.0.1-SNAPSHOT.jar
+        ```
+
+        The backend will start on `http://localhost:8080`
+      </Step>
+    </Steps>
+
+    ### Frontend Setup
+
+    Follow the same frontend steps as the Docker installation above.
+
+    ### Useful Make Commands
+
+    The project includes a Makefile for common tasks:
+
+    ```bash
+    # View available commands
+    make help
+
+    # Backend commands
+    make backend-run          # Run Spring Boot
+    make backend-build        # Build JAR
+    make backend-test         # Run tests
+    make backend-format       # Format code
+    make backend-format-check # Check formatting
+
+    # Docker commands
+    make up                   # Start docker compose
+    make down                 # Stop docker compose
+    make logs                 # Follow all logs
+    make ps                   # Show container status
+
+    # Database commands
+    make db-shell             # Access PostgreSQL shell
+    make db-reset             # Reset database (removes volumes)
+    ```
+  </Tab>
+
+  <Tab title="Production">
+    Deploy Hub to a production environment.
+
+    ### Prerequisites
+
+    - Ubuntu 22.04 LTS server (or similar)
+    - Docker and Docker Compose installed
+    - Domain name configured
+    - SSL/TLS certificates (Let's Encrypt recommended)
+    - Production database (managed PostgreSQL recommended)
+
+    ### Production Configuration
+
+    <Steps>
+      <Step title="Prepare Environment">
+        Create a production `.env` file with secure values:
+
+        ```bash .env
+        # Database (use managed PostgreSQL in production)
+        POSTGRES_DB=hub_production
+        POSTGRES_USER=hub_prod_user
+        POSTGRES_PASSWORD=strong_random_password_here
+        DB_HOST=your-postgres-host.provider.com
+        DB_PORT=5432
+
+        # Backend
+        BACKEND_PORT=8080
+
+        # Auth0
+        AUTH0_ISSUER=https://your-tenant.auth0.com/
+        AUTH0_AUDIENCE=https://api.yourdomain.com
+
+        # Cloudinary
+        CLOUDINARY_CLOUD_NAME=your_production_cloud
+        CLOUDINARY_API_KEY=your_production_key
+        CLOUDINARY_API_SECRET=your_production_secret
+
+        # Email
+        MAIL_USERNAME=your_production_email
+        MAIL_PASSWORD=your_production_smtp_key
+        APP_MAIL_FROM=noreply@yourdomain.com
+
+        # Application
+        APP_ADMIN_EMAIL=admin@yourdomain.com
+        APP_FRONTEND_URL=https://yourdomain.com
+
+        # Disable Swagger in production
+        SWAGGER_ENABLED=false
+        ```
+      </Step>
+
+      <Step title="Update docker-compose.yml">
+        Modify for production use:
+
+        ```yaml docker-compose.prod.yml
+        services:
+          backend:
+            build:
+              context: ./backend
+              dockerfile: Dockerfile
+            container_name: hub-backend
+            restart: always
+            environment:
+              DB_HOST: ${DB_HOST}
+              DB_PORT: ${DB_PORT}
+              DB_NAME: ${POSTGRES_DB}
+              DB_USER: ${POSTGRES_USER}
+              DB_PASSWORD: ${POSTGRES_PASSWORD}
+              AUTH0_ISSUER: ${AUTH0_ISSUER}
+              AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
+              CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+              CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+              CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+              APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL}
+              MAIL_USERNAME: ${MAIL_USERNAME}
+              MAIL_PASSWORD: ${MAIL_PASSWORD}
+              APP_MAIL_FROM: ${APP_MAIL_FROM}
+              APP_FRONTEND_URL: ${APP_FRONTEND_URL}
+              SWAGGER_ENABLED: ${SWAGGER_ENABLED}
+              SPRING_PROFILES_ACTIVE: production
+            ports:
+              - "8080:8080"
+            healthcheck:
+              test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+              interval: 30s
+              timeout: 10s
+              retries: 3
+
+          # Add nginx for reverse proxy
+          nginx:
+            image: nginx:alpine
+            container_name: hub-nginx
+            restart: always
+            ports:
+              - "80:80"
+              - "443:443"
+            volumes:
+              - ./nginx.conf:/etc/nginx/nginx.conf:ro
+              - ./ssl:/etc/nginx/ssl:ro
+            depends_on:
+              - backend
+        ```
+      </Step>
+
+      <Step title="Configure Nginx">
+        Create `nginx.conf`:
+
+        ```nginx nginx.conf
+        upstream backend {
+            server backend:8080;
+        }
+
+        server {
+            listen 80;
+            server_name api.yourdomain.com;
+            return 301 https://$server_name$request_uri;
+        }
+
+        server {
+            listen 443 ssl http2;
+            server_name api.yourdomain.com;
+
+            ssl_certificate /etc/nginx/ssl/fullchain.pem;
+            ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+
+            location / {
+                proxy_pass http://backend;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+        }
+        ```
+      </Step>
+
+      <Step title="Deploy Frontend">
+        Build and deploy the Next.js frontend:
+
+        ```bash
+        cd frontend/sports-hub-frontend
+
+        # Set production environment variables
+        export AUTH0_SECRET=your_production_secret
+        export AUTH0_BASE_URL=https://yourdomain.com
+        export AUTH0_ISSUER_BASE_URL=https://your-tenant.auth0.com
+        export AUTH0_CLIENT_ID=your_production_client_id
+        export AUTH0_CLIENT_SECRET=your_production_client_secret
+        export AUTH0_AUDIENCE=https://api.yourdomain.com
+        export AUTH0_DOMAIN=your-tenant.auth0.com
+        export NEXT_PUBLIC_API_URL=https://api.yourdomain.com
+
+        # Build
+        npm run build
+
+        # Start in production mode
+        npm start
+
+        # Or deploy to Vercel/Netlify
+        ```
+      </Step>
+
+      <Step title="Start Production Services">
+        ```bash
+        docker compose -f docker-compose.prod.yml up -d
+        ```
+      </Step>
+    </Steps>
+
+    <Warning>
+    **Security Checklist:**
+    - Use strong, unique passwords
+    - Enable SSL/TLS for all connections
+    - Disable Swagger UI in production
+    - Use managed database with backups
+    - Configure firewall rules
+    - Set up monitoring and logging
+    - Regular security updates
+    </Warning>
+  </Tab>
+</Tabs>
+
+## Auth0 Configuration
+
+Detailed Auth0 setup for authentication:
+
+<Steps>
+  <Step title="Create Auth0 Application">
+    1. Go to [Auth0 Dashboard](https://manage.auth0.com)
+    2. Navigate to **Applications** > **Applications**
+    3. Click **Create Application**
+    4. Choose **Regular Web Application**
+    5. Name it "Hub Platform"
+  </Step>
+
+  <Step title="Configure Application Settings">
+    In your application settings:
+
+    **Application URIs:**
+    - **Allowed Callback URLs**: 
+      ```
+      http://localhost:3000/api/auth/callback,
+      https://yourdomain.com/api/auth/callback
+      ```
+    - **Allowed Logout URLs**: 
+      ```
+      http://localhost:3000,
+      https://yourdomain.com
+      ```
+    - **Allowed Web Origins**: 
+      ```
+      http://localhost:3000,
+      https://yourdomain.com
+      ```
+
+    Save your settings.
+  </Step>
+
+  <Step title="Create Auth0 API">
+    1. Navigate to **Applications** > **APIs**
+    2. Click **Create API**
+    3. Set:
+       - **Name**: Hub API
+       - **Identifier**: `https://api.yourdomain.com` (this is your `AUTH0_AUDIENCE`)
+       - **Signing Algorithm**: RS256
+    4. Enable **RBAC** and **Add Permissions in the Access Token**
+  </Step>
+
+  <Step title="Configure API Permissions">
+    Add the following permissions (scopes):
+    - `read:venues` - Read venue information
+    - `write:venues` - Create and update venues
+    - `read:bookings` - Read bookings
+    - `write:bookings` - Create and manage bookings
+    - `read:profile` - Read user profile
+    - `write:profile` - Update user profile
+  </Step>
+
+  <Step title="Copy Credentials">
+    From your Auth0 application, copy:
+    - **Domain** (e.g., `your-tenant.auth0.com`)
+    - **Client ID**
+    - **Client Secret**
+
+    Use these in your `.env` and `.env.local` files.
+  </Step>
+</Steps>
+
+## Database Schema
+
+The application uses Flyway migrations to manage the database schema. On startup, the following tables are created:
+
+<Accordion title="View Database Schema">
+
+**Core Tables:**
+- `city` - Spanish cities with geospatial data
+- `users` - User accounts and profiles
+- `venue` - Padel venues with location data
+- `resource` - Courts/resources at venues
+- `booking` - Court bookings
+- `payment` - Payment records
+- `match_request` - Match-making requests
+
+**PostGIS Extensions:**
+- `postgis` - Spatial database extension
+- `pgcrypto` - Cryptographic functions
+- `btree_gist` - Generalized index support
+
+The database includes pre-seeded data for major Spanish cities including Madrid, Barcelona, Valencia, Sevilla, and others.
+
+</Accordion>
+
+## Verification
+
+After installation, verify everything is working:
+
+<Steps>
+  <Step title="Check Backend Health">
+    ```bash
+    curl http://localhost:8080/actuator/health
+    ```
+
+    Expected response:
+    ```json
+    {"status":"UP"}
+    ```
+  </Step>
+
+  <Step title="Access API Documentation">
+    Open `http://localhost:8080/swagger-ui.html` in your browser to view the OpenAPI documentation.
+  </Step>
+
+  <Step title="Test Database Connection">
+    ```bash
+    docker compose exec postgres psql -U hub_user -d hub -c "SELECT COUNT(*) FROM city;"
+    ```
+
+    Should return a count of cities (seeded data).
+  </Step>
+
+  <Step title="Verify Frontend">
+    Open `http://localhost:3000` and test:
+    - Page loads successfully
+    - Login button is visible
+    - Auth0 login flow works
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Port Already in Use">
+    If you see "port already in use" errors:
+
+    ```bash
+    # Check what's using the port
+    lsof -i :8080
+    lsof -i :3000
+    lsof -i :5432
+
+    # Kill the process or change ports in .env
+    BACKEND_PORT=8081
+    ```
+  </Accordion>
+
+  <Accordion title="Database Migration Fails">
+    If Flyway migrations fail:
+
+    ```bash
+    # Check migration history
+    docker compose exec postgres psql -U hub_user -d hub -c "SELECT * FROM flyway_schema_history;"
+
+    # Reset database (CAUTION: deletes all data)
+    docker compose down -v
+    docker compose up -d
+    ```
+  </Accordion>
+
+  <Accordion title="Auth0 JWT Validation Error">
+    If you see JWT validation errors:
+
+    - Verify `AUTH0_ISSUER` ends with a trailing slash
+    - Ensure `AUTH0_AUDIENCE` matches between backend and frontend
+    - Check that your Auth0 API is configured for RS256
+    - Verify the token has not expired
+  </Accordion>
+
+  <Accordion title="Cloudinary Upload Fails">
+    If image uploads fail:
+
+    - Verify your Cloudinary credentials in `.env`
+    - Check that your Cloudinary account is active
+    - Ensure the cloud name, API key, and secret are correct
+    - Test credentials at the [Cloudinary Console](https://cloudinary.com/console)
+  </Accordion>
+
+  <Accordion title="Frontend Build Errors">
+    If Next.js build fails:
+
+    ```bash
+    # Clear Next.js cache
+    rm -rf .next
+
+    # Remove node_modules and reinstall
+    rm -rf node_modules package-lock.json
+    npm install
+
+    # Rebuild
+    npm run build
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Development Guide" icon="code" href="/development/setup">
+    Learn about the development workflow and coding standards
+  </Card>
+
+  <Card title="API Reference" icon="book-open" href="/api/introduction">
+    Explore the REST API endpoints and authentication
+  </Card>
+
+  <Card title="Architecture" icon="diagram-project" href="/development/architecture">
+    Understand the system architecture and design patterns
+  </Card>
+
+  <Card title="Configuration" icon="gear" href="/configuration/environment">
+    Configure environment variables and integrations
+  </Card>
+</CardGroup>

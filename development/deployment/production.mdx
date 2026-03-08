@@ -1,0 +1,578 @@
+---
+title: Production Deployment
+description: Deploy Hub platform to production with security and performance best practices
+---
+
+This guide covers production deployment considerations for the Hub platform, including infrastructure setup, security configurations, and performance optimizations.
+
+## Architecture Overview
+
+The Hub platform consists of:
+
+- **Backend**: Spring Boot 3 application (Java 21)
+- **Frontend**: Next.js application
+- **Database**: PostgreSQL 16 with PostGIS extension
+- **Auth**: Auth0 OAuth2/JWT authentication
+- **Storage**: Cloudinary for image uploads
+- **Email**: SMTP-based email service
+
+## Deployment Options
+
+### Container-Based Deployment
+
+Recommended for cloud platforms and Kubernetes:
+
+- AWS ECS/Fargate
+- Google Cloud Run
+- Azure Container Instances
+- Kubernetes (EKS, GKE, AKS)
+- Docker Swarm
+
+### Platform-as-a-Service
+
+Managed platforms for simplified deployment:
+
+- Heroku
+- Render
+- Railway
+- Fly.io
+
+### Traditional VPS
+
+For custom infrastructure:
+
+- DigitalOcean Droplets
+- AWS EC2
+- Linode
+- Hetzner Cloud
+
+## Environment Variables
+
+All required environment variables for production:
+
+### Database Configuration
+
+```bash
+DB_HOST=your-database-host
+DB_PORT=5432
+DB_NAME=hub_production
+DB_USER=hub_user
+DB_PASSWORD=your-secure-password
+DB_SSL_MODE=require
+```
+
+<Warning>
+  Always use `DB_SSL_MODE=require` in production to encrypt database connections.
+</Warning>
+
+### Authentication (Auth0)
+
+```bash
+AUTH0_ISSUER=https://your-domain.auth0.com/
+AUTH0_AUDIENCE=your-api-audience
+```
+
+<Note>
+  Configure Auth0 callback URLs to match your production domain.
+</Note>
+
+### Cloudinary (Image Storage)
+
+```bash
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+```
+
+### Email Configuration
+
+```bash
+APP_ADMIN_EMAIL=admin@yourdomain.com
+BREVO_API_KEY=your-brevo-api-key
+APP_MAIL_FROM=noreply@yourdomain.com
+```
+
+### Application Settings
+
+```bash
+APP_FRONTEND_URL=https://yourdomain.com
+BACKEND_PORT=8080
+SWAGGER_ENABLED=false
+```
+
+<Warning>
+  Disable Swagger in production by setting `SWAGGER_ENABLED=false` to prevent API documentation exposure.
+</Warning>
+
+### Optional Configuration
+
+```bash
+# Booking settings
+booking.payment-hold-duration=5m
+
+# Database connection pooling
+spring.datasource.hikari.maximum-pool-size=10
+spring.datasource.hikari.minimum-idle=5
+```
+
+## Security Best Practices
+
+### 1. Database Security
+
+<Steps>
+  <Step title="Enable SSL connections">
+    Set `DB_SSL_MODE=require` to enforce encrypted connections.
+
+    ```yaml application.yaml
+    spring:
+      datasource:
+        url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require
+    ```
+  </Step>
+
+  <Step title="Use strong credentials">
+    - Generate complex passwords (minimum 32 characters)
+    - Use different credentials for each environment
+    - Rotate passwords periodically
+  </Step>
+
+  <Step title="Restrict network access">
+    - Configure database firewall rules
+    - Only allow connections from application servers
+    - Use VPC or private networking when possible
+  </Step>
+</Steps>
+
+### 2. Application Security
+
+<Warning>
+  Never expose sensitive environment variables in logs or error messages.
+</Warning>
+
+**Required configurations:**
+
+```yaml application.yaml
+# Disable auto-commit for transaction control
+spring:
+  datasource:
+    hikari:
+      auto-commit: false
+
+# Validate database schema
+jpa:
+  hibernate:
+    ddl-auto: validate
+
+# Minimal health endpoint exposure
+management:
+  endpoint:
+    health:
+      show-details: never
+```
+
+### 3. API Security
+
+- **Disable Swagger**: Set `SWAGGER_ENABLED=false`
+- **Configure CORS**: Restrict frontend origins
+- **Rate limiting**: Implement API rate limits
+- **JWT validation**: Verify Auth0 tokens properly
+
+### 4. Secrets Management
+
+Recommended approaches:
+
+<CodeGroup>
+```bash AWS Secrets Manager
+aws secretsmanager get-secret-value \
+  --secret-id hub/production/db-password \
+  --query SecretString \
+  --output text
+```
+
+```bash HashiCorp Vault
+vault kv get -field=password secret/hub/production/database
+```
+
+```bash Kubernetes Secrets
+kubectl create secret generic hub-secrets \
+  --from-literal=db-password=your-password
+```
+</CodeGroup>
+
+## Database Setup
+
+### PostgreSQL with PostGIS
+
+<Steps>
+  <Step title="Provision managed database">
+    Use a managed PostgreSQL service:
+    
+    - AWS RDS for PostgreSQL
+    - Google Cloud SQL
+    - Azure Database for PostgreSQL
+    - DigitalOcean Managed Databases
+    - Supabase
+  </Step>
+
+  <Step title="Enable PostGIS extension">
+    ```sql
+    CREATE EXTENSION IF NOT EXISTS postgis;
+    ```
+  </Step>
+
+  <Step title="Create application user">
+    ```sql
+    CREATE USER hub_user WITH PASSWORD 'your-secure-password';
+    GRANT ALL PRIVILEGES ON DATABASE hub_production TO hub_user;
+    ```
+  </Step>
+
+  <Step title="Configure connection pooling">
+    Adjust Hikari pool settings based on your load:
+
+    ```yaml
+    spring:
+      datasource:
+        hikari:
+          maximum-pool-size: 10
+          minimum-idle: 5
+          connection-timeout: 30000
+          idle-timeout: 600000
+          max-lifetime: 1800000
+    ```
+  </Step>
+</Steps>
+
+### Database Migrations
+
+The application uses Flyway for schema management:
+
+```yaml application.yaml
+spring:
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+```
+
+<Note>
+  Migrations run automatically on application startup. Ensure proper backup before deploying schema changes.
+</Note>
+
+## Backend Deployment
+
+### Building the Application
+
+<Steps>
+  <Step title="Build the JAR file">
+    ```bash
+    cd backend
+    ./mvnw clean package -DskipTests
+    ```
+
+    The compiled JAR will be in `target/backend-*.jar`
+  </Step>
+
+  <Step title="Build Docker image">
+    ```bash
+    docker build -t hub-backend:latest ./backend
+    ```
+
+    Or with version tag:
+    ```bash
+    docker build -t hub-backend:1.0.0 ./backend
+    ```
+  </Step>
+
+  <Step title="Push to container registry">
+    <CodeGroup>
+    ```bash Docker Hub
+    docker tag hub-backend:latest yourusername/hub-backend:latest
+    docker push yourusername/hub-backend:latest
+    ```
+
+    ```bash AWS ECR
+    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 123456789.dkr.ecr.us-east-1.amazonaws.com
+    docker tag hub-backend:latest 123456789.dkr.ecr.us-east-1.amazonaws.com/hub-backend:latest
+    docker push 123456789.dkr.ecr.us-east-1.amazonaws.com/hub-backend:latest
+    ```
+
+    ```bash Google Artifact Registry
+    gcloud auth configure-docker us-central1-docker.pkg.dev
+    docker tag hub-backend:latest us-central1-docker.pkg.dev/project-id/hub/backend:latest
+    docker push us-central1-docker.pkg.dev/project-id/hub/backend:latest
+    ```
+    </CodeGroup>
+  </Step>
+</Steps>
+
+### Container Orchestration
+
+#### Kubernetes Deployment Example
+
+```yaml deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hub-backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: hub-backend
+  template:
+    metadata:
+      labels:
+        app: hub-backend
+    spec:
+      containers:
+      - name: backend
+        image: hub-backend:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: hub-secrets
+              key: db-host
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: hub-secrets
+              key: db-password
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 5
+```
+
+#### Docker Compose Production
+
+```yaml docker-compose.prod.yml
+services:
+  backend:
+    image: hub-backend:latest
+    restart: always
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_SSL_MODE=require
+      - SWAGGER_ENABLED=false
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+```
+
+## Performance Optimization
+
+### JVM Tuning
+
+Optimize Java runtime for production:
+
+```dockerfile
+ENTRYPOINT ["java", \
+  "-XX:+UseG1GC", \
+  "-XX:MaxRAMPercentage=75.0", \
+  "-XX:+UseStringDeduplication", \
+  "-Djava.security.egd=file:/dev/./urandom", \
+  "-jar", "app.jar"]
+```
+
+### Database Connection Pooling
+
+```yaml
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+```
+
+### Caching Strategy
+
+Consider implementing:
+
+- Redis for session storage
+- Application-level caching with Caffeine
+- HTTP caching headers for static resources
+
+## Monitoring and Logging
+
+### Health Checks
+
+The application exposes health endpoints:
+
+```yaml
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+```
+
+**Endpoints:**
+- `GET /actuator/health` - Application health status
+- `GET /actuator/info` - Application information
+
+### Logging Configuration
+
+Structured logging for production:
+
+```yaml
+logging:
+  level:
+    root: INFO
+    com.hub: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{traceId}] %logger{36} - %msg%n"
+```
+
+<Note>
+  The application includes trace IDs in logs for distributed tracing.
+</Note>
+
+### Monitoring Tools
+
+Recommended monitoring solutions:
+
+- **APM**: New Relic, Datadog, Dynatrace
+- **Logging**: ELK Stack, Splunk, Loki
+- **Metrics**: Prometheus + Grafana
+- **Error tracking**: Sentry, Rollbar
+
+## Backup and Recovery
+
+### Database Backups
+
+<Steps>
+  <Step title="Configure automated backups">
+    Enable automated backups in your managed database service (daily recommended).
+  </Step>
+
+  <Step title="Test backup restoration">
+    Regularly test backup restoration to a staging environment.
+  </Step>
+
+  <Step title="Implement point-in-time recovery">
+    Enable transaction log backups for point-in-time recovery capability.
+  </Step>
+</Steps>
+
+### Application State
+
+- **User uploads**: Backed up automatically by Cloudinary
+- **Configuration**: Store in version control
+- **Secrets**: Backed up by secrets management service
+
+## Scaling Considerations
+
+### Horizontal Scaling
+
+The backend is stateless and can be scaled horizontally:
+
+```bash Kubernetes
+kubectl scale deployment hub-backend --replicas=5
+```
+
+### Database Scaling
+
+Options for database scaling:
+
+- **Vertical**: Increase instance size
+- **Read replicas**: For read-heavy workloads
+- **Connection pooling**: PgBouncer for connection management
+
+### Load Balancing
+
+Recommended load balancers:
+
+- AWS Application Load Balancer
+- Google Cloud Load Balancing
+- Nginx
+- Traefik
+
+## Deployment Checklist
+
+Before deploying to production:
+
+- [ ] All environment variables configured
+- [ ] Database SSL mode set to `require`
+- [ ] Swagger disabled (`SWAGGER_ENABLED=false`)
+- [ ] Strong database credentials generated
+- [ ] Auth0 production tenant configured
+- [ ] Cloudinary production account set up
+- [ ] Email service configured and tested
+- [ ] Database backups enabled
+- [ ] Monitoring and alerting configured
+- [ ] Health checks implemented
+- [ ] Load testing completed
+- [ ] SSL/TLS certificates installed
+- [ ] Domain DNS configured
+- [ ] Firewall rules configured
+- [ ] Secrets stored in secrets manager
+
+## Troubleshooting
+
+### Application Won't Start
+
+1. Check environment variables are set:
+   ```bash
+   env | grep -E 'DB_|AUTH0_|CLOUDINARY_'
+   ```
+
+2. Verify database connectivity:
+   ```bash
+   psql "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require"
+   ```
+
+3. Check application logs for specific errors
+
+### Database Connection Issues
+
+- Verify SSL mode matches database configuration
+- Check firewall rules allow application IP
+- Confirm credentials are correct
+- Test network connectivity to database host
+
+### Performance Issues
+
+- Review database query performance
+- Check connection pool settings
+- Monitor JVM memory usage
+- Analyze application logs for slow requests
+
+## Next Steps
+
+- Set up [Docker for local development](/development/deployment/docker)
+- Configure [CI/CD pipelines](/development/deployment/cicd)
+- Review [Security best practices](/development/security)

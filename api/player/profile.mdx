@@ -1,0 +1,345 @@
+---
+title: 'Player Profile API'
+description: 'Manage your user profile and settings'
+---
+
+# Player Profile API
+
+Manage your user profile, update personal information, and configure preferences.
+
+## Get My Profile
+
+Retrieve the authenticated user's profile information.
+
+### Endpoint
+
+```
+GET /api/me
+```
+
+### Response
+
+<ResponseField name="id" type="string (UUID)" required>
+  Unique identifier for the user
+</ResponseField>
+
+<ResponseField name="email" type="string" required>
+  User's email address
+</ResponseField>
+
+<ResponseField name="displayName" type="string" required>
+  Display name shown to other users
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  User's bio or description
+</ResponseField>
+
+<ResponseField name="phoneNumber" type="string">
+  User's phone number
+</ResponseField>
+
+<ResponseField name="avatarUrl" type="string">
+  URL to the user's avatar image
+</ResponseField>
+
+<ResponseField name="role" type="string" required>
+  User role: `PLAYER`, `OWNER`, `ADMIN`
+</ResponseField>
+
+<ResponseField name="ownerRequestStatus" type="string">
+  Status of venue owner role request: `PENDING`, `APPROVED`, `REJECTED`
+</ResponseField>
+
+<ResponseField name="preferredSport" type="string">
+  Preferred sport: `PADEL`, `TENNIS`, `PICKLEBALL`
+</ResponseField>
+
+<ResponseField name="skillLevel" type="string">
+  Player skill level: `BEGINNER`, `INTERMEDIATE`, `ADVANCED`, `PROFESSIONAL`
+</ResponseField>
+
+<ResponseField name="city" type="string">
+  City where the user is located
+</ResponseField>
+
+<ResponseField name="countryCode" type="string">
+  ISO country code (e.g., ES, US, FR)
+</ResponseField>
+
+<ResponseField name="onboardingCompleted" type="boolean" required>
+  Whether the user has completed onboarding
+</ResponseField>
+
+<ResponseField name="lastLoginAt" type="string (timestamp)">
+  Timestamp of the user's last login
+</ResponseField>
+
+<ResponseField name="noShowCount" type="integer" required>
+  Number of times the user didn't show up to a match
+</ResponseField>
+
+<ResponseField name="matchBannedUntil" type="string (timestamp)">
+  Timestamp until which the user is banned from match-making (if applicable)
+</ResponseField>
+
+<ResponseField name="matchNotificationsEnabled" type="boolean" required>
+  Whether the user receives match invitation notifications
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.hub.example.com/api/me" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+fetch('https://api.hub.example.com/api/me', {
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+})
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "id": "770e8400-e29b-41d4-a716-446655440002",
+  "email": "player@example.com",
+  "displayName": "Carlos Rodriguez",
+  "description": "Passionate padel player looking for competitive matches!",
+  "phoneNumber": "+34612345678",
+  "avatarUrl": "https://cdn.hub.example.com/avatars/player123.jpg",
+  "role": "PLAYER",
+  "ownerRequestStatus": null,
+  "preferredSport": "PADEL",
+  "skillLevel": "INTERMEDIATE",
+  "city": "Madrid",
+  "countryCode": "ES",
+  "onboardingCompleted": true,
+  "lastLoginAt": "2026-03-08T10:30:00Z",
+  "noShowCount": 0,
+  "matchBannedUntil": null,
+  "matchNotificationsEnabled": true
+}
+```
+
+---
+
+## Update Profile
+
+Update the authenticated user's profile information.
+
+### Endpoint
+
+```
+PUT /api/me
+```
+
+### Request Body
+
+<ParamField body="displayName" type="string" required>
+  Display name (cannot be blank)
+</ParamField>
+
+<ParamField body="description" type="string">
+  User bio or description
+</ParamField>
+
+<ParamField body="phoneNumber" type="string">
+  Phone number
+</ParamField>
+
+<ParamField body="city" type="string">
+  City of residence
+</ParamField>
+
+<ParamField body="countryCode" type="string">
+  ISO country code
+</ParamField>
+
+<ParamField body="preferredSport" type="string">
+  Preferred sport: `PADEL`, `TENNIS`, `PICKLEBALL`
+</ParamField>
+
+<ParamField body="skillLevel" type="string">
+  Skill level: `BEGINNER`, `INTERMEDIATE`, `ADVANCED`, `PROFESSIONAL`
+</ParamField>
+
+<ParamField body="matchNotificationsEnabled" type="boolean">
+  Enable or disable match invitation notifications
+</ParamField>
+
+### Response
+
+Returns the updated user profile object (same structure as Get My Profile).
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X PUT "https://api.hub.example.com/api/me" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "displayName": "Carlos Rodriguez",
+    "description": "Experienced padel player, available for matches on weekends",
+    "phoneNumber": "+34612345678",
+    "city": "Madrid",
+    "countryCode": "ES",
+    "preferredSport": "PADEL",
+    "skillLevel": "ADVANCED",
+    "matchNotificationsEnabled": true
+  }'
+```
+
+```javascript JavaScript
+fetch('https://api.hub.example.com/api/me', {
+  method: 'PUT',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    displayName: 'Carlos Rodriguez',
+    description: 'Experienced padel player, available for matches on weekends',
+    phoneNumber: '+34612345678',
+    city: 'Madrid',
+    countryCode: 'ES',
+    preferredSport: 'PADEL',
+    skillLevel: 'ADVANCED',
+    matchNotificationsEnabled: true
+  })
+})
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "id": "770e8400-e29b-41d4-a716-446655440002",
+  "email": "player@example.com",
+  "displayName": "Carlos Rodriguez",
+  "description": "Experienced padel player, available for matches on weekends",
+  "phoneNumber": "+34612345678",
+  "avatarUrl": "https://cdn.hub.example.com/avatars/player123.jpg",
+  "role": "PLAYER",
+  "ownerRequestStatus": null,
+  "preferredSport": "PADEL",
+  "skillLevel": "ADVANCED",
+  "city": "Madrid",
+  "countryCode": "ES",
+  "onboardingCompleted": true,
+  "lastLoginAt": "2026-03-08T10:30:00Z",
+  "noShowCount": 0,
+  "matchBannedUntil": null,
+  "matchNotificationsEnabled": true
+}
+```
+
+---
+
+## Update Avatar
+
+Update the user's avatar image.
+
+### Endpoint
+
+```
+PATCH /api/me/avatar
+```
+
+### Request Body
+
+<ParamField body="publicId" type="string" required>
+  Public ID of the uploaded image (from your CDN/image service)
+</ParamField>
+
+<ParamField body="url" type="string" required>
+  Public URL of the avatar image
+</ParamField>
+
+### Response
+
+Returns the updated user profile object.
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X PATCH "https://api.hub.example.com/api/me/avatar" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "publicId": "avatars/player123_v2",
+    "url": "https://cdn.hub.example.com/avatars/player123_v2.jpg"
+  }'
+```
+
+```javascript JavaScript
+fetch('https://api.hub.example.com/api/me/avatar', {
+  method: 'PATCH',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    publicId: 'avatars/player123_v2',
+    url: 'https://cdn.hub.example.com/avatars/player123_v2.jpg'
+  })
+})
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+</CodeGroup>
+
+<Note>
+  You'll need to upload the image to your CDN or image hosting service first, then provide the public ID and URL to this endpoint. The Hub platform expects images to be already uploaded and accessible.
+</Note>
+
+---
+
+## Request Owner Role
+
+Submit a request to upgrade your account to a venue owner role.
+
+### Endpoint
+
+```
+POST /api/me/request-owner
+```
+
+### Response
+
+Returns 202 Accepted on success. Your request will be reviewed by administrators.
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.hub.example.com/api/me/request-owner" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+fetch('https://api.hub.example.com/api/me/request-owner', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+<Note>
+  After submitting a request, your profile's `ownerRequestStatus` will change to `PENDING`. You'll be notified once an administrator reviews your request. Once approved, you'll gain access to venue management features.
+</Note>

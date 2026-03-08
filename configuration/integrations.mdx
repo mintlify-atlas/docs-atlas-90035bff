@@ -1,0 +1,569 @@
+---
+title: 'Third-Party Integrations'
+description: 'Configure Cloudinary, Brevo, and other external services for the Hub platform'
+---
+
+## Overview
+
+Hub integrates with several third-party services to provide media storage, email notifications, and authentication. This guide covers configuration for all external integrations.
+
+## Cloudinary (Media Storage)
+
+Cloudinary provides cloud-based image and video management for venue photos and user profile pictures.
+
+### Features
+
+- Image upload and storage
+- Automatic image optimization
+- Responsive image transformations
+- CDN delivery
+- Image format conversion (WebP, AVIF)
+
+### Setup
+
+<Steps>
+  <Step title="Create Cloudinary account">
+    1. Sign up at [cloudinary.com](https://cloudinary.com)
+    2. Choose the free tier (includes 25GB storage and 25GB bandwidth)
+    3. Access your dashboard to get credentials
+  </Step>
+  
+  <Step title="Get credentials">
+    From your Cloudinary dashboard, note:
+    
+    - **Cloud Name**: Your unique cloud identifier
+    - **API Key**: Public API key
+    - **API Secret**: Private secret key
+  </Step>
+  
+  <Step title="Configure environment">
+    Add to your `.env` file:
+    
+    ```bash .env
+    CLOUDINARY_CLOUD_NAME=your-cloud-name
+    CLOUDINARY_API_KEY=123456789012345
+    CLOUDINARY_API_SECRET=your_secret_key_here
+    ```
+  </Step>
+  
+  <Step title="Create upload presets (optional)">
+    In Cloudinary dashboard:
+    1. Go to **Settings** > **Upload**
+    2. Create upload presets for different image types:
+       - `venue_photos` - Max 2000x2000px, JPEG quality 85
+       - `profile_pictures` - Max 500x500px, crop to square
+  </Step>
+</Steps>
+
+### Configuration
+
+<ParamField path="CLOUDINARY_CLOUD_NAME" type="string" required>
+  Your Cloudinary cloud name
+  
+  **Example**: `padelhub-media`, `hub-prod`
+  
+  Found in your Cloudinary dashboard header.
+</ParamField>
+
+<ParamField path="CLOUDINARY_API_KEY" type="string" required>
+  Cloudinary API key for authentication
+  
+  **Format**: 15-digit number
+  
+  **Example**: `123456789012345`
+</ParamField>
+
+<ParamField path="CLOUDINARY_API_SECRET" type="string" required>
+  Cloudinary API secret for signing requests
+  
+  <Warning>
+    Keep this secret secure. Never expose in client-side code or commit to version control.
+  </Warning>
+</ParamField>
+
+### Usage in Application
+
+The backend uses Cloudinary for:
+
+#### Venue Photos
+
+```java Upload venue photo
+CloudinaryAdapter cloudinary;
+
+public String uploadVenuePhoto(MultipartFile file, Long venueId) {
+    return cloudinary.uploadImage(
+        file,
+        Map.of(
+            "folder", "venues/" + venueId,
+            "transformation", List.of(
+                Map.of("width", 2000, "height", 2000, "crop", "limit"),
+                Map.of("quality", "auto:good")
+            )
+        )
+    );
+}
+```
+
+#### User Profile Pictures
+
+```java Upload profile picture
+public String uploadProfilePicture(MultipartFile file, String userId) {
+    return cloudinary.uploadImage(
+        file,
+        Map.of(
+            "folder", "users/" + userId,
+            "transformation", Map.of(
+                "width", 500,
+                "height", 500,
+                "crop", "fill",
+                "gravity", "face"
+            )
+        )
+    );
+}
+```
+
+### Image Transformations
+
+Cloudinary URLs support on-the-fly transformations:
+
+<CodeGroup>
+
+```javascript Responsive Images
+// Original
+https://res.cloudinary.com/padelhub/image/upload/v1234/venues/1/photo.jpg
+
+// Thumbnail (300x300)
+https://res.cloudinary.com/padelhub/image/upload/w_300,h_300,c_fill/v1234/venues/1/photo.jpg
+
+// WebP format
+https://res.cloudinary.com/padelhub/image/upload/f_webp/v1234/venues/1/photo.jpg
+
+// Optimized and responsive
+https://res.cloudinary.com/padelhub/image/upload/w_auto,f_auto,q_auto/v1234/venues/1/photo.jpg
+```
+
+```html HTML Picture Element
+<picture>
+  <source 
+    type="image/webp"
+    srcset="https://res.cloudinary.com/.../w_800,f_webp/photo.jpg 800w,
+            https://res.cloudinary.com/.../w_1200,f_webp/photo.jpg 1200w"
+  />
+  <img 
+    src="https://res.cloudinary.com/.../w_800/photo.jpg"
+    alt="Venue photo"
+  />
+</picture>
+```
+
+</CodeGroup>
+
+### Best Practices
+
+- Use automatic format (`f_auto`) and quality (`q_auto`) for optimal delivery
+- Implement lazy loading for images
+- Use responsive image sizes with `w_auto`
+- Organize images in folders by entity type
+- Set up automatic backup and moderation rules
+
+---
+
+## Brevo (Email Service)
+
+Brevo (formerly Sendinblue) handles transactional emails for bookings, match requests, and notifications.
+
+### Features
+
+- Transactional email API
+- Email templates
+- Delivery tracking
+- SMTP relay
+- Free tier: 300 emails/day
+
+### Setup
+
+<Steps>
+  <Step title="Create Brevo account">
+    1. Sign up at [brevo.com](https://www.brevo.com)
+    2. Verify your email address
+    3. Complete account setup
+  </Step>
+  
+  <Step title="Generate API key">
+    1. Go to **Settings** > **API Keys**
+    2. Click **Generate a new API key**
+    3. Give it a name (e.g., "Hub Production")
+    4. Copy the generated key
+  </Step>
+  
+  <Step title="Configure sender">
+    1. Go to **Settings** > **Senders**
+    2. Add your sending email address (e.g., `noreply@padelhub.com`)
+    3. Verify domain ownership (add DNS records)
+  </Step>
+  
+  <Step title="Configure environment">
+    Add to your `.env` file:
+    
+    ```bash .env
+    BREVO_API_KEY=xkeysib-abc123...
+    APP_MAIL_FROM=noreply@padelhub.com
+    ```
+  </Step>
+</Steps>
+
+### Configuration
+
+<ParamField path="BREVO_API_KEY" type="string" required>
+  Brevo API key for sending transactional emails
+  
+  **Format**: `xkeysib-` followed by 64 characters
+  
+  **Development**: Use `dummy-key-for-local` to log emails without sending
+  
+  <Warning>
+    Keep your API key secure. Rotate regularly and never commit to version control.
+  </Warning>
+</ParamField>
+
+<ParamField path="APP_MAIL_FROM" type="string">
+  Sender email address for all transactional emails
+  
+  **Default**: `noreply@padelhub.com`
+  
+  **Requirements**:
+  - Must be verified in Brevo
+  - Domain should have SPF and DKIM records configured
+  - Use a no-reply address for transactional emails
+</ParamField>
+
+### Email Types
+
+Hub sends the following transactional emails:
+
+<AccordionGroup>
+  <Accordion title="Booking confirmation">
+    Sent when a booking is confirmed:
+    
+    - Booking details (venue, court, date/time)
+    - Total cost
+    - Cancellation policy
+    - Link to view booking
+  </Accordion>
+  
+  <Accordion title="Match request received">
+    Sent when a user receives a match request:
+    
+    - Sender information
+    - Match details (venue, date/time)
+    - Accept/decline links
+  </Accordion>
+  
+  <Accordion title="Match request accepted">
+    Sent when a match request is accepted:
+    
+    - Confirmation message
+    - Match details
+    - Player contact information
+  </Accordion>
+  
+  <Accordion title="Booking reminder">
+    Sent 24 hours before a booking:
+    
+    - Reminder message
+    - Booking details
+    - Venue address and directions
+  </Accordion>
+  
+  <Accordion title="Payment receipt">
+    Sent after successful payment:
+    
+    - Payment amount
+    - Payment method
+    - Receipt number
+    - Booking details
+  </Accordion>
+</AccordionGroup>
+
+### Usage in Application
+
+The `BrevoEmailSender` component handles email delivery:
+
+```java Send Email
+@Component
+public class BrevoEmailSender {
+    
+    @Value("${brevo.api.key}")
+    private String apiKey;
+    
+    @Value("${app.mail.from}")
+    private String from;
+    
+    public void send(String to, String subject, String htmlContent) {
+        // Sends via Brevo API v3
+        // POST https://api.brevo.com/v3/smtp/email
+    }
+}
+```
+
+Example usage:
+
+```java Booking Confirmation Email
+public void sendBookingConfirmation(Booking booking) {
+    String html = templateEngine.process("booking-confirmation", 
+        Map.of(
+            "userName", booking.getUser().getName(),
+            "venueName", booking.getResource().getVenue().getName(),
+            "dateTime", booking.getStartTime(),
+            "totalCost", booking.getTotalCost()
+        )
+    );
+    
+    brevoEmailSender.send(
+        booking.getUser().getEmail(),
+        "Booking Confirmed - " + booking.getResource().getVenue().getName(),
+        html
+    );
+}
+```
+
+### Email Templates
+
+HTML email templates use Thymeleaf and are stored in:
+
+```
+backend/src/main/resources/templates/emails/
+├── booking-confirmation.html
+├── match-request.html
+├── match-accepted.html
+└── booking-reminder.html
+```
+
+<Note>
+  Templates use Thymeleaf syntax for dynamic content insertion.
+</Note>
+
+### Development Mode
+
+For local development without sending real emails:
+
+```bash .env.local
+BREVO_API_KEY=dummy-key-for-local
+```
+
+With the dummy key, emails are logged to console instead of sent:
+
+```
+INFO : Would send email to user@example.com
+INFO : Subject: Booking Confirmed
+INFO : Body: <html>...</html>
+```
+
+### Monitoring
+
+**Brevo Dashboard**:
+- View email delivery statistics
+- Check bounce and spam rates
+- Monitor API usage
+- Review email logs
+
+**Application Logs**:
+```java
+log.info("Email sent via Brevo API to {}", to);
+```
+
+---
+
+## Auth0 (Authentication)
+
+Auth0 integration is covered in detail in the [Authentication Configuration](/configuration/authentication) guide.
+
+### Quick Reference
+
+<ParamField path="AUTH0_ISSUER" type="string" required>
+  Auth0 domain for JWT validation
+  
+  **Example**: `https://padelhub.eu.auth0.com/`
+</ParamField>
+
+<ParamField path="AUTH0_AUDIENCE" type="string" required>
+  Auth0 API audience identifier
+  
+  **Example**: `https://api.padelhub.com`
+</ParamField>
+
+[Learn more about Auth0 configuration →](/configuration/authentication)
+
+---
+
+## Integration Health Checks
+
+### Testing Cloudinary
+
+```bash
+curl -X POST "https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload" \
+  -F "file=@test-image.jpg" \
+  -F "api_key=${CLOUDINARY_API_KEY}" \
+  -F "timestamp=$(date +%s)" \
+  -F "signature=YOUR_SIGNATURE"
+```
+
+### Testing Brevo
+
+```bash
+curl -X POST "https://api.brevo.com/v3/smtp/email" \
+  -H "api-key: ${BREVO_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sender": {"email": "noreply@padelhub.com"},
+    "to": [{"email": "test@example.com"}],
+    "subject": "Test Email",
+    "htmlContent": "<p>Test message</p>"
+  }'
+```
+
+### Testing Auth0
+
+```bash
+curl "${AUTH0_ISSUER}.well-known/jwks.json"
+```
+
+---
+
+## Security Considerations
+
+<Steps>
+  <Step title="Rotate API keys regularly">
+    Set up a schedule to rotate all API keys every 90 days.
+  </Step>
+  
+  <Step title="Use environment-specific keys">
+    Never share keys between development, staging, and production.
+  </Step>
+  
+  <Step title="Monitor usage">
+    Set up alerts for unusual API usage patterns:
+    - Sudden spike in requests
+    - High error rates
+    - Quota approaching limits
+  </Step>
+  
+  <Step title="Implement rate limiting">
+    Protect against abuse:
+    - Limit image uploads per user per hour
+    - Throttle email sending
+    - Implement CAPTCHA for public endpoints
+  </Step>
+  
+  <Step title="Store secrets securely">
+    Use secrets management:
+    - AWS Secrets Manager
+    - HashiCorp Vault
+    - Azure Key Vault
+    - Google Secret Manager
+  </Step>
+</Steps>
+
+---
+
+## Cost Management
+
+### Cloudinary
+
+**Free Tier**:
+- 25 GB storage
+- 25 GB monthly bandwidth
+- 25 credits/month
+
+**Optimization Tips**:
+- Use automatic format and quality (`f_auto`, `q_auto`)
+- Enable lazy loading
+- Implement image size limits
+- Delete unused images regularly
+
+### Brevo
+
+**Free Tier**:
+- 300 emails/day
+- Unlimited contacts
+
+**Optimization Tips**:
+- Batch notification emails
+- Implement user email preferences
+- Use email templates efficiently
+- Monitor bounce rates
+
+### Auth0
+
+**Free Tier**:
+- 7,000 monthly active users
+- Unlimited logins
+
+**Optimization Tips**:
+- Implement token refresh to reduce authentication calls
+- Use appropriate token expiration times
+- Cache user profile data
+
+---
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Cloudinary upload fails">
+    **Error**: `Invalid API key`
+    
+    **Solutions**:
+    - Verify `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` are correct
+    - Check API key hasn't been revoked
+    - Ensure cloud name matches your account
+  </Accordion>
+  
+  <Accordion title="Emails not sending">
+    **Error**: `Unauthorized` or emails not delivered
+    
+    **Solutions**:
+    - Verify `BREVO_API_KEY` is valid
+    - Check sender email is verified in Brevo
+    - Review Brevo dashboard for blocked sends
+    - Check DNS records (SPF, DKIM)
+  </Accordion>
+  
+  <Accordion title="Auth0 token validation fails">
+    **Error**: `Invalid issuer` or `Invalid audience`
+    
+    **Solutions**:
+    - Verify `AUTH0_ISSUER` includes trailing slash
+    - Ensure `AUTH0_AUDIENCE` matches Auth0 API identifier
+    - Check Auth0 API is enabled
+  </Accordion>
+  
+  <Accordion title="High API costs">
+    **Issue**: Approaching quota limits
+    
+    **Solutions**:
+    - Review usage patterns in dashboards
+    - Implement caching where appropriate
+    - Optimize image sizes and formats
+    - Consolidate email notifications
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Setup" icon="gear" href="/configuration/environment">
+    Complete environment configuration
+  </Card>
+  <Card title="Deployment Guide" icon="rocket" href="/development/deployment/docker">
+    Deploy to production
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/introduction">
+    Explore API endpoints
+  </Card>
+  <Card title="Backend Modules" icon="cube" href="/development/backend/modules">
+    Understand backend architecture
+  </Card>
+</CardGroup>

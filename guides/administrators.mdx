@@ -1,0 +1,682 @@
+---
+title: 'Administrator Guide'
+description: 'Complete guide for Hub platform administrators managing users, venues, and system operations'
+icon: 'shield-halved'
+---
+
+## Administrator Overview
+
+As a Hub administrator, you oversee platform operations, approve venues and resources, manage user roles, and ensure platform quality and compliance. This guide covers all administrative functions.
+
+<Warning>
+Administrator actions directly impact platform operations and user experience. Always verify information before taking action.
+</Warning>
+
+---
+
+## Admin Dashboard
+
+Access the **Admin Dashboard** from the main navigation. The dashboard provides real-time platform metrics:
+
+### Key Metrics
+
+<CardGroup cols={2}>
+  <Card title="User Statistics" icon="users">
+    - Total users
+    - Active players
+    - Venue owners
+    - Pending owner requests
+  </Card>
+  
+  <Card title="Venue Metrics" icon="building">
+    - Total venues
+    - Active venues
+    - Pending approval
+    - Suspended venues
+  </Card>
+  
+  <Card title="Resource Statistics" icon="square">
+    - Total resources (courts)
+    - Active resources
+    - Pending approval
+    - Utilization rate
+  </Card>
+  
+  <Card title="Revenue & Bookings" icon="chart-line">
+    - Total bookings
+    - Revenue this month
+    - Platform commission
+    - Active matches
+  </Card>
+</CardGroup>
+
+### Pending Actions Queue
+
+The dashboard highlights items requiring attention:
+
+- **Pending Venues**: New venues awaiting approval
+- **Pending Resources**: New courts awaiting approval  
+- **Owner Requests**: Users requesting owner role access
+- **Recent Bookings**: Latest platform activity
+
+<Tip>Check the pending queue daily to ensure quick approval times and positive user experience.</Tip>
+
+---
+
+## User Management
+
+Administrators manage all user accounts and role assignments.
+
+### Viewing Users
+
+Navigate to **Admin > Users** to see all platform users:
+
+- View by role (All, Players, Owners, Admins)
+- Search by name or email
+- Filter by status (Active, Suspended)
+- Paginated list with user details
+
+### User Information
+
+Click any user to view:
+
+- Profile information (name, email, phone)
+- Role and status
+- Registration date
+- Onboarding completion
+- Activity history
+- Bookings and matches (for players)
+- Venues and resources (for owners)
+
+### Owner Role Requests
+
+<Steps>
+  <Step title="Review Pending Requests">
+    Navigate to **Admin > Users > Pending Owner Requests**
+    
+    Review each request:
+    - User profile and history
+    - Business information provided
+    - Account age and activity
+    - Any red flags or concerns
+  </Step>
+  
+  <Step title="Approve or Reject">
+    **To Approve:**
+    1. Click **Approve Owner Request**
+    2. User receives email notification
+    3. User can immediately create venues
+    
+    **To Reject:**
+    1. Click **Reject Owner Request**
+    2. Optionally provide rejection reason
+    3. User receives notification with next steps
+  </Step>
+</Steps>
+
+<Accordion title="Owner Approval Guidelines">
+  **Approve if:**
+  - User has complete profile
+  - Business information is provided
+  - No suspicious activity or policy violations
+  - Valid contact information
+  
+  **Reject if:**
+  - Incomplete profile
+  - Suspicious or fraudulent information
+  - Previous policy violations
+  - Duplicate account
+  
+  <Note>Users can reapply after addressing rejection reasons.</Note>
+</Accordion>
+
+### Managing User Roles
+
+Administrators can change user roles:
+
+1. Navigate to user profile
+2. Click **Change Role**
+3. Select new role:
+   - **PLAYER**: Standard user (default)
+   - **OWNER**: Can create and manage venues
+   - **ADMIN**: Full platform access
+4. Confirm change
+
+<Warning>
+Changing a role immediately grants or revokes associated permissions. Ensure this is intentional before confirming.
+</Warning>
+
+### Account Status Management
+
+<Accordion title="Suspending User Accounts">
+  To suspend a user account:
+  
+  1. Navigate to user profile
+  2. Click **Suspend Account**
+  3. Provide reason for suspension
+  4. Confirm action
+  
+  **Effects:**
+  - User cannot log in
+  - Existing bookings are honored
+  - User receives suspension notification
+  - No new bookings or activity allowed
+</Accordion>
+
+<Accordion title="Reactivating Accounts">
+  To reactivate a suspended account:
+  
+  1. Navigate to suspended user profile
+  2. Click **Reactivate Account**
+  3. User regains full platform access
+  4. User receives reactivation notification
+</Accordion>
+
+---
+
+## Venue Management
+
+Administrators approve and manage all venues on the platform.
+
+### Viewing Venues
+
+Navigate to **Admin > Venues**:
+
+- **All Venues**: Complete venue list
+- **Pending**: Awaiting approval
+- **Active**: Approved and live
+- **Suspended**: Temporarily disabled
+- **Rejected**: Not approved
+
+### Venue Approval Process
+
+<Steps>
+  <Step title="Review Pending Venue">
+    Click on any pending venue to review:
+    
+    **Check:**
+    - Venue name and description
+    - Complete address and GPS coordinates
+    - Photos (quality and relevance)
+    - Owner information
+    - Facility details
+    
+    <Tip>Verify GPS coordinates match the address using a map tool.</Tip>
+  </Step>
+  
+  <Step title="Approve or Reject">
+    **To Approve:**
+    1. Click **Approve Venue**
+    2. Venue status changes to Active
+    3. Venue appears in player search
+    4. Owner receives approval notification
+    
+    **To Reject:**
+    1. Click **Reject Venue**
+    2. Enter rejection reason (required)
+    3. Owner receives notification with reason
+    4. Owner can address issues and resubmit
+  </Step>
+</Steps>
+
+### Venue Approval Guidelines
+
+<CardGroup cols={2}>
+  <Card title="Approve When" icon="check" color="green">
+    - Complete, accurate information
+    - Valid physical address
+    - High-quality photos (5+ images)
+    - Legitimate business
+    - Appropriate facility description
+  </Card>
+  
+  <Card title="Reject When" icon="xmark" color="red">
+    - Incomplete information
+    - Fake or invalid address
+    - Poor quality or irrelevant photos
+    - Duplicate venue listing
+    - Inappropriate content
+    - Obvious fraud or spam
+  </Card>
+</CardGroup>
+
+### Common Rejection Reasons
+
+<Accordion title="Incomplete Information">
+  Venue lacks required details (description, address, photos). Request owner to complete all fields.
+</Accordion>
+
+<Accordion title="Invalid Location">
+  GPS coordinates don't match address, or address is fake/incorrect. Request correction.
+</Accordion>
+
+<Accordion title="Poor Quality Photos">
+  Images are low resolution, blurry, or not of the actual facility. Request better photos.
+</Accordion>
+
+<Accordion title="Duplicate Venue">
+  Venue already exists on platform. Reject and direct owner to existing listing.
+</Accordion>
+
+### Suspending Active Venues
+
+Administrators can suspend active venues:
+
+<Steps>
+  <Step title="Navigate to Venue">
+    Go to **Admin > Venues > [Venue Name]**
+  </Step>
+  
+  <Step title="Suspend with Reason">
+    Click **Suspend Venue** and provide reason:
+    - Policy violation
+    - Quality issues reported
+    - Owner request
+    - Legal/compliance issue
+  </Step>
+  
+  <Step title="Effects of Suspension">
+    - Venue hidden from player search
+    - No new bookings accepted
+    - Existing bookings honored
+    - Owner notified of suspension
+  </Step>
+</Steps>
+
+<Warning>
+Suspending a venue is serious and affects owner revenue. Ensure there's a valid reason and consider communicating with owner first.
+</Warning>
+
+---
+
+## Resource Management
+
+Resources (courts) also require admin approval before going live.
+
+### Viewing Resources
+
+Navigate to **Admin > Resources**:
+
+- View all resources across all venues
+- Filter by status (Pending, Active, Suspended)
+- Filter by venue
+- Sort by creation date
+
+### Resource Approval Process
+
+<Steps>
+  <Step title="Review Resource Details">
+    Click on pending resource to review:
+    
+    - Resource name and description
+    - Assigned venue (must be active)
+    - Resource type (Padel Court)
+    - Slot duration
+    - Schedule configuration
+    - Pricing rules
+    - Photos
+  </Step>
+  
+  <Step title="Verify Configuration">
+    **Check:**
+    - Schedule is reasonable (e.g., 8 AM - 10 PM)
+    - Pricing is configured and reasonable
+    - At least one price rule exists
+    - Photos match the specific court
+  </Step>
+  
+  <Step title="Approve or Reject">
+    **Approve**: Resource becomes bookable immediately
+    
+    **Reject**: Provide detailed reason (missing schedule, no pricing, etc.)
+  </Step>
+</Steps>
+
+### Resource Approval Guidelines
+
+<Accordion title="Must Have">
+  - Linked to an approved venue
+  - At least one weekday schedule configured
+  - At least one pricing rule
+  - Valid slot duration (60, 90, or 120 min typical)
+  - Descriptive name ("Court 1", not just "Resource")
+</Accordion>
+
+<Accordion title="Nice to Have">
+  - Full week schedule
+  - Multiple pricing tiers (peak/off-peak)
+  - Court-specific photos
+  - Detailed description (surface type, lighting, etc.)
+</Accordion>
+
+### Common Resource Issues
+
+<CardGroup cols={2}>
+  <Card title="No Schedule" icon="calendar-xmark">
+    Resource has no operating hours configured. Reject and request owner to set schedule.
+  </Card>
+  
+  <Card title="No Pricing" icon="dollar-sign">
+    No price rules configured. Resource cannot be booked without pricing.
+  </Card>
+  
+  <Card title="Invalid Duration" icon="clock">
+    Slot duration is unrealistic (e.g., 15 minutes or 5 hours). Request correction.
+  </Card>
+  
+  <Card title="Orphaned Resource" icon="link-slash">
+    Linked venue is suspended or deleted. Cannot approve orphaned resources.
+  </Card>
+</CardGroup>
+
+---
+
+## Booking Oversight
+
+Monitor all bookings across the platform.
+
+### Viewing Bookings
+
+Navigate to **Admin > Bookings** to see:
+
+- Recent bookings (last 24 hours)
+- All bookings (paginated)
+- Filter by status, venue, or date range
+- Search by booking ID or user email
+
+### Booking Information
+
+Each booking displays:
+
+- Player and owner details
+- Venue and resource
+- Date, time, duration
+- Price and payment status
+- Booking status
+- Created and updated timestamps
+
+### Handling Booking Issues
+
+<Accordion title="Payment Disputes">
+  If a player reports payment issues:
+  
+  1. Review booking details
+  2. Check payment status in Stripe
+  3. Verify with owner if needed
+  4. Process refund if appropriate
+  5. Document resolution
+</Accordion>
+
+<Accordion title="No-Show Disputes">
+  If owner reports player no-show:
+  
+  1. Check player's booking history
+  2. Review check-in status (for matches)
+  3. Contact player for their account
+  4. Apply no-show policy if confirmed
+  5. Document decision
+</Accordion>
+
+<Accordion title="Facility Issues">
+  If player reports facility problems:
+  
+  1. Contact venue owner immediately
+  2. Document the issue
+  3. Determine appropriate action (refund, credit, etc.)
+  4. Follow up with both parties
+  5. Monitor owner for recurring issues
+</Accordion>
+
+---
+
+## Platform Statistics
+
+Administrators have access to comprehensive platform analytics.
+
+### Revenue Dashboard
+
+View financial metrics:
+
+- **Total Revenue**: Platform lifetime earnings
+- **Monthly Revenue**: Current month earnings
+- **Revenue by Venue**: Top performing venues
+- **Commission Earnings**: Platform fees collected
+- **Average Booking Value**: Typical transaction size
+
+### Usage Statistics
+
+<CardGroup cols={2}>
+  <Card title="User Growth" icon="chart-line">
+    - New user registrations
+    - User retention rate
+    - Active user count
+    - Role distribution
+  </Card>
+  
+  <Card title="Booking Trends" icon="calendar-check">
+    - Bookings per day/week/month
+    - Peak booking hours
+    - Average lead time
+    - Cancellation rate
+  </Card>
+  
+  <Card title="Venue Performance" icon="building">
+    - Venue count over time
+    - Average revenue per venue
+    - Court utilization rates
+    - Top performing venues
+  </Card>
+  
+  <Card title="Match Making" icon="users">
+    - Active match requests
+    - Match completion rate
+    - Average fill time
+    - Player satisfaction
+  </Card>
+</CardGroup>
+
+---
+
+## Quality Control
+
+### Monitoring Venue Quality
+
+Regularly review venues for quality issues:
+
+<Steps>
+  <Step title="Review Recent Bookings">
+    Check for patterns of cancellations or issues at specific venues.
+  </Step>
+  
+  <Step title="Player Feedback">
+    Monitor support tickets and player complaints about venues or courts.
+  </Step>
+  
+  <Step title="Take Action">
+    - Contact owner for minor issues
+    - Request improvements (photos, descriptions)
+    - Suspend venue for serious violations
+    - Document all actions
+  </Step>
+</Steps>
+
+### Owner Performance
+
+Track owner behavior:
+
+- Response time to issues
+- Booking cancellation rates
+- Resource maintenance and updates
+- Adherence to policies
+
+<Note>Good owners who maintain quality venues should be recognized and potentially featured.</Note>
+
+---
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Quick Approvals" icon="bolt">
+    Approve venues and resources within 24-48 hours. Delays frustrate owners and slow platform growth.
+  </Card>
+  
+  <Card title="Clear Communication" icon="comment">
+    When rejecting, provide specific, actionable feedback so owners can improve and resubmit.
+  </Card>
+  
+  <Card title="Consistent Standards" icon="scale-balanced">
+    Apply approval guidelines consistently across all venues to maintain fairness.
+  </Card>
+  
+  <Card title="Proactive Monitoring" icon="eye">
+    Regularly review active venues and resources to catch quality issues early.
+  </Card>
+</CardGroup>
+
+### Daily Admin Checklist
+
+<Steps>
+  <Step title="Check Pending Queue">
+    - Review pending owner requests
+    - Approve/reject pending venues
+    - Approve/reject pending resources
+  </Step>
+  
+  <Step title="Monitor Activity">
+    - Review recent bookings
+    - Check for unusual patterns
+    - Review support tickets
+  </Step>
+  
+  <Step title="Platform Health">
+    - Check key metrics dashboard
+    - Verify payment processing
+    - Review error logs (if applicable)
+  </Step>
+</Steps>
+
+---
+
+## Troubleshooting
+
+<Accordion title="Owner complains venue not showing in search">
+  **Check in order:**
+  
+  1. Venue status is Active (not Pending/Suspended)
+  2. Venue has at least one Active resource
+  3. Resource has schedule configured
+  4. Resource has pricing rules
+  5. GPS coordinates are valid
+  
+  If all correct, may be search filter issue - have owner verify.
+</Accordion>
+
+<Accordion title="Payment not processing">
+  **Investigate:**
+  
+  1. Check Stripe integration status
+  2. Verify owner's Stripe account is connected
+  3. Check for Stripe error messages
+  4. Review owner's bank details in Stripe
+  5. Contact Stripe support if needed
+</Accordion>
+
+<Accordion title="Duplicate venue listings">
+  1. Identify the duplicate
+  2. Determine which is legitimate
+  3. Suspend/reject the duplicate
+  4. Contact owner to clarify
+  5. Transfer bookings if needed (contact support)
+</Accordion>
+
+<Accordion title="User cannot access admin dashboard">
+  **Verify:**
+  
+  1. User role is set to ADMIN
+  2. User account is active (not suspended)
+  3. User has completed onboarding
+  4. Clear browser cache and retry
+  5. Check for system-wide issues
+</Accordion>
+
+---
+
+## Admin Tools Reference
+
+### User Management API Endpoints
+
+<CodeGroup>
+```http Get All Users
+GET /api/admin/users?page=0&size=20
+Authorization: Bearer {token}
+```
+
+```http Approve Owner Request  
+PATCH /api/admin/users/{userId}/approve-owner
+Authorization: Bearer {token}
+```
+
+```http Change User Role
+PATCH /api/admin/users/{userId}/role
+Content-Type: application/json
+
+{
+  "role": "OWNER"
+}
+```
+</CodeGroup>
+
+### Venue Management API Endpoints
+
+<CodeGroup>
+```http Get Pending Venues
+GET /api/admin/venues/pending
+Authorization: Bearer {token}
+```
+
+```http Approve Venue
+PATCH /api/admin/venues/{venueId}/approve
+Authorization: Bearer {token}
+```
+
+```http Reject Venue
+PATCH /api/admin/venues/{venueId}/reject
+Content-Type: application/json
+
+{
+  "reason": "Incomplete information - please add photos"
+}
+```
+</CodeGroup>
+
+---
+
+## Support & Escalation
+
+<Warning>
+For critical issues (payment failures, data breaches, legal issues), escalate immediately to senior management.
+</Warning>
+
+### Contact Information
+
+- **Technical Issues**: devops@hub.example.com
+- **Payment/Finance**: finance@hub.example.com  
+- **Legal/Compliance**: legal@hub.example.com
+- **Senior Admin**: admin-lead@hub.example.com
+
+### Escalation Guidelines
+
+<Accordion title="Immediate Escalation Required">
+  - Data breach or security incident
+  - Payment processing failure affecting multiple users
+  - Legal threat or compliance violation
+  - System-wide outage
+  - Fraud or criminal activity
+</Accordion>
+
+<Accordion title="Standard Escalation (24h)">
+  - Recurring venue quality issues
+  - Owner disputes requiring intervention
+  - Complex refund situations
+  - Feature requests from multiple users
+</Accordion>

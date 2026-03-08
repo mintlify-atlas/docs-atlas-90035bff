@@ -1,0 +1,906 @@
+---
+title: Database Schema
+description: PostgreSQL database schema, Flyway migrations, and data model for the Hub platform
+---
+
+The Hub platform uses **PostgreSQL** with **PostGIS** extensions for geographic queries. Database migrations are managed with **Flyway**.
+
+## Database Technology Stack
+
+<CardGroup cols={2}>
+  <Card title="Database" icon="database">
+    PostgreSQL 15+
+  </Card>
+  <Card title="Extensions" icon="map">
+    PostGIS for geographic queries
+  </Card>
+  <Card title="Migrations" icon="code-branch">
+    Flyway for version control
+  </Card>
+  <Card title="ORM" icon="layer-group">
+    Spring Data JPA + Hibernate
+  </Card>
+</CardGroup>
+
+## PostgreSQL Extensions
+
+<Note>
+  Location: Migration `V1__init.sql`
+</Note>
+
+```sql
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS postgis;       -- Geographic queries
+CREATE EXTENSION IF NOT EXISTS pgcrypto;      -- UUID generation
+CREATE EXTENSION IF NOT EXISTS btree_gist;    -- Exclusion constraints
+```
+
+### PostGIS Usage
+
+PostGIS enables geographic operations:
+
+- **Venue location storage** - `geography(Point, 4326)` for lat/lng
+- **Radius search** - Find venues within distance
+- **City lookup** - Pre-populated Spanish cities
+
+## Migration Structure
+
+Flyway migrations are versioned SQL files:
+
+<Accordion title="Migration Files">
+
+**Location**: `backend/src/main/resources/db/migration/`
+
+| File | Description |
+|------|-------------|
+| `V1__init.sql` | Base schema with extensions and city data |
+| `V2__users.sql` | User profile table |
+| `V3__create_venue.sql` | Venue and venue images |
+| `V4__create_resource.sql` | Resources, schedules, pricing, images |
+| `V5__create_booking.sql` | Bookings with overlap prevention |
+| `V6__create_payment.sql` | Payment tracking |
+| `V7__create_match_request.sql` | Match requests, players, invitations |
+| `V8__seed_dev_data.sql` | Development test data |
+
+**Naming Convention**:
+- `V{version}__{description}.sql` - Versioned migrations
+- Executed in order, tracked in `flyway_schema_history` table
+- Never modify existing migrations in production
+
+</Accordion>
+
+## Core Tables
+
+### User Profile
+
+<Accordion title="user_profile Table">
+
+**Purpose**: User accounts and authentication
+
+```sql
+CREATE TABLE user_profile (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    auth0_id       VARCHAR(128) UNIQUE NOT NULL,  -- External auth
+    email          VARCHAR(255) UNIQUE,
+    email_verified BOOLEAN DEFAULT FALSE,
+    
+    -- Profile information
+    display_name   VARCHAR(100),
+    description    TEXT,
+    phone_number   VARCHAR(20),
+    
+    -- Avatar
+    avatar_url     VARCHAR(500),
+    avatar_public_id VARCHAR(200),
+    
+    -- Role management
+    role VARCHAR(20) NOT NULL DEFAULT 'PLAYER'
+        CHECK (role IN ('PLAYER', 'OWNER', 'ADMIN')),
+    owner_request_status VARCHAR(20) DEFAULT NULL,
+    
+    -- Sports preferences
+    preferred_sport VARCHAR(50)
+        CHECK (preferred_sport IN ('PADEL', 'TENNIS', 'SQUASH', 'BADMINTON')),
+    skill_level VARCHAR(20)
+        CHECK (skill_level IN ('BEGINNER', 'INTERMEDIATE', 'ADVANCED')),
+    
+    -- Location
+    city         VARCHAR(100),
+    country_code VARCHAR(3),
+    
+    -- Status
+    active BOOLEAN DEFAULT TRUE,
+    onboarding_completed BOOLEAN DEFAULT FALSE,
+    
+    -- Match system
+    match_notifications_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    match_search_radius_km      INTEGER NOT NULL DEFAULT 10,
+    city_id                     BIGINT REFERENCES city(id),
+    no_show_count               INTEGER NOT NULL DEFAULT 0,
+    match_banned_until          TIMESTAMPTZ,
+    last_match_cancelled_at     TIMESTAMPTZ,
+    
+    -- Timestamps
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_login_at TIMESTAMPTZ
+);
+```
+
+**Key Features**:
+- Auth0 integration via `auth0_id`
+- Role-based access control
+- Match reliability tracking (no-show count, bans)
+- Geographic preferences for match finding
+
+</Accordion>
+
+### Venue
+
+<Accordion title="venue and venue_image Tables">
+
+**Purpose**: Padel venue management
+
+```sql
+CREATE TABLE venue (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id      UUID NOT NULL REFERENCES user_profile(id) ON DELETE RESTRICT,
+    name          VARCHAR(150) NOT NULL,
+    description   TEXT,
+    
+    -- Address
+    street        VARCHAR(200),
+    city          VARCHAR(100),
+    country       VARCHAR(100),
+    postal_code   VARCHAR(20),
+    
+    -- Geographic location for search
+    location      geography(Point, 4326),
+    
+    -- Status
+    status        VARCHAR(30) NOT NULL DEFAULT 'PENDING_REVIEW',
+    reject_reason TEXT,
+    
+    -- Timestamps
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_venue_owner_id ON venue(owner_id);
+CREATE INDEX idx_venue_status ON venue(status);
+CREATE INDEX idx_venue_location ON venue USING GIST(location);
+```
+
+**Venue Images**:
+
+```sql
+CREATE TABLE venue_image (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    venue_id      UUID NOT NULL REFERENCES venue(id) ON DELETE CASCADE,
+    url           VARCHAR(500) NOT NULL,
+    public_id     VARCHAR(200) NOT NULL,  -- Cloudinary ID for deletion
+    display_order INT DEFAULT 0,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_venue_image_venue_id ON venue_image(venue_id);
+```
+
+**Key Features**:
+- PostGIS location for geographic search
+- Cascade delete for images when venue deleted
+- Status-based filtering for public visibility
+
+</Accordion>
+
+### Resource
+
+<Accordion title="resource and Related Tables">
+
+**Purpose**: Bookable courts within venues
+
+```sql
+CREATE TABLE resource (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    venue_id        UUID NOT NULL REFERENCES venue(id) ON DELETE CASCADE,
+    name            VARCHAR(100) NOT NULL,
+    description     TEXT,
+    resource_type   VARCHAR(30) NOT NULL,
+    slot_duration   INT NOT NULL,  -- Minutes per booking slot
+    status          VARCHAR(30) NOT NULL DEFAULT 'PENDING_REVIEW',
+    reject_reason   TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_resource_venue_id ON resource(venue_id);
+CREATE INDEX idx_resource_status ON resource(status);
+CREATE INDEX idx_resource_venue_id_status ON resource (venue_id, status);
+```
+
+**Resource Schedules** (operating hours):
+
+```sql
+CREATE TABLE resource_schedule (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    resource_id     UUID NOT NULL REFERENCES resource(id) ON DELETE CASCADE,
+    day_of_week     VARCHAR(10) NOT NULL,
+    opening_time    TIME NOT NULL,
+    closing_time    TIME NOT NULL
+);
+
+CREATE UNIQUE INDEX ux_resource_schedule_unique_slot 
+    ON resource_schedule(resource_id, day_of_week, opening_time, closing_time);
+CREATE INDEX idx_schedule_resource_id ON resource_schedule(resource_id);
+```
+
+**Price Rules** (dynamic pricing):
+
+```sql
+CREATE TABLE resource_price_rule (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    resource_id     UUID NOT NULL REFERENCES resource(id) ON DELETE CASCADE,
+    day_type        VARCHAR(20) NOT NULL,  -- WEEKDAY, WEEKEND, specific days
+    start_time      TIME NOT NULL,
+    end_time        TIME NOT NULL,
+    price           DECIMAL(8,2) NOT NULL,
+    currency        VARCHAR(3) NOT NULL DEFAULT 'EUR'
+);
+
+CREATE INDEX idx_price_rule_resource_id ON resource_price_rule(resource_id);
+```
+
+**Resource Images**:
+
+```sql
+CREATE TABLE resource_image (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    resource_id     UUID NOT NULL REFERENCES resource(id) ON DELETE CASCADE,
+    url             VARCHAR(500) NOT NULL,
+    public_id       VARCHAR(200) NOT NULL,
+    display_order   INT DEFAULT 0,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_resource_image_resource_id ON resource_image(resource_id);
+```
+
+**Key Features**:
+- One-to-many schedules for flexible operating hours
+- Dynamic pricing based on day type and time
+- Cascade delete when parent venue/resource deleted
+
+</Accordion>
+
+### Booking
+
+<Accordion title="booking Table">
+
+**Purpose**: Court bookings with payment tracking
+
+```sql
+CREATE TABLE booking (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    resource_id     UUID NOT NULL REFERENCES resource(id),
+    player_id       UUID NOT NULL REFERENCES user_profile(id),
+    booking_date    DATE NOT NULL,
+    start_time      TIME NOT NULL,
+    end_time        TIME NOT NULL,
+    price_paid      DECIMAL(8,2) NOT NULL,
+    currency        VARCHAR(3) NOT NULL DEFAULT 'EUR',
+    
+    -- Status tracking
+    status          VARCHAR(20) NOT NULL DEFAULT 'CONFIRMED',
+    payment_status  VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    
+    -- Cancellation
+    cancelled_at    TIMESTAMPTZ,
+    cancel_reason   TEXT,
+    
+    -- Timestamps
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at      TIMESTAMPTZ,  -- Payment hold expiration
+    
+    CONSTRAINT booking_time_order CHECK (end_time > start_time)
+);
+```
+
+**Overlap Prevention** (critical constraint):
+
+```sql
+ALTER TABLE booking
+  ADD CONSTRAINT booking_no_overlap
+  EXCLUDE USING gist (
+    resource_id WITH =,
+    tsrange(
+      booking_date::timestamp + start_time,
+      booking_date::timestamp + end_time,
+      '[)'
+    ) WITH &&
+  )
+  WHERE (status IN ('PENDING_PAYMENT', 'CONFIRMED', 'PENDING_MATCH'));
+```
+
+**Indexes**:
+
+```sql
+CREATE INDEX idx_booking_resource_date ON booking (resource_id, booking_date);
+CREATE INDEX idx_booking_player_date   ON booking (player_id, booking_date);
+CREATE INDEX idx_booking_pending_expires 
+    ON booking (expires_at) WHERE status = 'PENDING_PAYMENT';
+CREATE INDEX idx_booking_pending_match_expires 
+    ON booking (expires_at) WHERE status = 'PENDING_MATCH';
+```
+
+**Key Features**:
+- **Exclusion constraint** prevents double-booking
+- Time range overlap detection using `tsrange` and `&&` operator
+- Partial indexes for efficient expiration queries
+- Only active bookings checked for overlap
+
+</Accordion>
+
+### Payment
+
+<Accordion title="payment Table">
+
+**Purpose**: Payment transaction tracking
+
+```sql
+CREATE TABLE payment (
+    id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    booking_id                  UUID NOT NULL REFERENCES booking(id),
+    player_id                   UUID REFERENCES user_profile(id),
+    stripe_payment_intent_id    VARCHAR(100) UNIQUE NOT NULL,
+    amount                      DECIMAL(8,2) NOT NULL,
+    currency                    VARCHAR(3) NOT NULL,
+    status                      VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_payment_player_id ON payment(player_id) WHERE player_id IS NOT NULL;
+```
+
+**Key Features**:
+- Stripe payment intent tracking
+- One payment per booking
+- Nullable player_id for match split payments
+
+</Accordion>
+
+### Match Request
+
+<Accordion title="match_request, match_player, and match_invitation Tables">
+
+**Purpose**: Match finding and organization
+
+**Match Requests**:
+
+```sql
+CREATE TABLE match_request (
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organizer_id          UUID NOT NULL REFERENCES user_profile(id),
+    resource_id           UUID NOT NULL REFERENCES resource(id),
+    booking_date          DATE NOT NULL,
+    start_time            TIME NOT NULL,
+    slot_duration_minutes INTEGER NOT NULL,
+    
+    -- Match configuration
+    format                VARCHAR(20) NOT NULL,  -- SINGLES, DOUBLES
+    skill_level           VARCHAR(20) NOT NULL,
+    custom_message        TEXT,
+    
+    -- Invitation
+    invitation_token      UUID NOT NULL UNIQUE,
+    
+    -- Geographic search
+    search_lat            DOUBLE PRECISION NOT NULL,
+    search_lng            DOUBLE PRECISION NOT NULL,
+    search_radius_km      DOUBLE PRECISION NOT NULL,
+    
+    -- Pricing
+    price_per_player      DECIMAL(10,2),
+    
+    -- Status
+    status                VARCHAR(30) NOT NULL DEFAULT 'OPEN',
+    expires_at            TIMESTAMPTZ NOT NULL,
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_match_request_organizer  ON match_request(organizer_id);
+CREATE INDEX idx_match_request_token      ON match_request(invitation_token);
+CREATE INDEX idx_match_request_status     ON match_request(status) WHERE status = 'OPEN';
+```
+
+**Match Players**:
+
+```sql
+CREATE TABLE match_player (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    match_request_id UUID NOT NULL REFERENCES match_request(id) ON DELETE CASCADE,
+    player_id        UUID NOT NULL REFERENCES user_profile(id),
+    team             VARCHAR(10) NOT NULL,  -- TEAM_A, TEAM_B
+    role             VARCHAR(20) NOT NULL,  -- ORGANIZER, GUEST
+    joined_at        TIMESTAMPTZ NOT NULL,
+    absence_reported BOOLEAN NOT NULL DEFAULT FALSE,
+    checked_in       BOOLEAN NOT NULL DEFAULT FALSE,
+    checked_in_at    TIMESTAMPTZ,
+    
+    CONSTRAINT match_player_unique UNIQUE (match_request_id, player_id)
+);
+
+CREATE INDEX idx_match_player_request ON match_player(match_request_id);
+```
+
+**Match Invitations**:
+
+```sql
+CREATE TABLE match_invitation (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    match_request_id UUID NOT NULL REFERENCES match_request(id),
+    player_id        UUID NOT NULL REFERENCES user_profile(id),
+    player_email     VARCHAR(255) NOT NULL,
+    status           VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    free_substitute  BOOLEAN NOT NULL DEFAULT FALSE,
+    sent_at          TIMESTAMPTZ NOT NULL,
+    responded_at     TIMESTAMPTZ,
+    
+    UNIQUE (match_request_id, player_id)
+);
+
+CREATE INDEX idx_invitation_player_id     ON match_invitation(player_id);
+CREATE INDEX idx_invitation_match_request ON match_invitation(match_request_id);
+```
+
+**Key Features**:
+- Invitation token for public join links
+- Geographic search center stored as lat/lng
+- Team and role tracking for match organization
+- Check-in and absence reporting
+- Cascade delete players/invitations with match
+
+</Accordion>
+
+### City Reference Data
+
+<Accordion title="city Table">
+
+**Purpose**: Pre-populated city data for location selection
+
+```sql
+CREATE TABLE city (
+    id           BIGSERIAL PRIMARY KEY,
+    name         VARCHAR(100) NOT NULL,
+    country_code VARCHAR(3) NOT NULL DEFAULT 'ES',
+    latitude     DOUBLE PRECISION NOT NULL,
+    longitude    DOUBLE PRECISION NOT NULL,
+    location     geography(Point, 4326) NOT NULL
+);
+
+CREATE INDEX idx_city_country   ON city(country_code);
+CREATE INDEX idx_city_location  ON city USING GIST(location);
+```
+
+**Key Features**:
+- Spanish cities pre-loaded in V1 migration
+- PostGIS geography for distance calculations
+- Used for user location and match search
+
+</Accordion>
+
+## Database Constraints
+
+### Referential Integrity
+
+<CodeGroup>
+
+```sql Foreign Keys
+-- Venue ownership
+ALTER TABLE venue 
+    ADD FOREIGN KEY (owner_id) 
+    REFERENCES user_profile(id) ON DELETE RESTRICT;
+
+-- Resource belongs to venue
+ALTER TABLE resource 
+    ADD FOREIGN KEY (venue_id) 
+    REFERENCES venue(id) ON DELETE CASCADE;
+
+-- Booking references
+ALTER TABLE booking
+    ADD FOREIGN KEY (resource_id) REFERENCES resource(id),
+    ADD FOREIGN KEY (player_id) REFERENCES user_profile(id);
+```
+
+```sql Check Constraints
+-- Enum validation
+ALTER TABLE user_profile
+    ADD CONSTRAINT check_role 
+    CHECK (role IN ('PLAYER', 'OWNER', 'ADMIN'));
+
+-- Time ordering
+ALTER TABLE booking
+    ADD CONSTRAINT booking_time_order 
+    CHECK (end_time > start_time);
+```
+
+```sql Unique Constraints
+-- One player per match
+ALTER TABLE match_player
+    ADD CONSTRAINT match_player_unique 
+    UNIQUE (match_request_id, player_id);
+
+-- Unique auth0 ID
+ALTER TABLE user_profile
+    ADD CONSTRAINT user_profile_auth0_id_unique 
+    UNIQUE (auth0_id);
+```
+
+</CodeGroup>
+
+### Exclusion Constraints
+
+**Booking Overlap Prevention**:
+
+```sql
+-- Prevents double-booking using temporal overlap
+ALTER TABLE booking
+  ADD CONSTRAINT booking_no_overlap
+  EXCLUDE USING gist (
+    resource_id WITH =,           -- Same resource
+    tsrange(                      -- Time range
+      booking_date::timestamp + start_time,
+      booking_date::timestamp + end_time,
+      '[)'                        -- Half-open interval
+    ) WITH &&                     -- Overlaps operator
+  )
+  WHERE (status IN ('PENDING_PAYMENT', 'CONFIRMED', 'PENDING_MATCH'));
+```
+
+<Note>
+  This constraint requires the `btree_gist` extension and ensures no two active bookings overlap for the same resource.
+</Note>
+
+## Indexes
+
+### Performance Indexes
+
+<Accordion title="Key Indexes by Table">
+
+**User Profile**:
+```sql
+-- Fast auth lookup
+CREATE UNIQUE INDEX idx_user_auth0_id ON user_profile(auth0_id);
+```
+
+**Venue**:
+```sql
+-- Owner's venues
+CREATE INDEX idx_venue_owner_id ON venue(owner_id);
+-- Public venue filtering
+CREATE INDEX idx_venue_status ON venue(status);
+-- Geographic search
+CREATE INDEX idx_venue_location ON venue USING GIST(location);
+```
+
+**Resource**:
+```sql
+-- Venue's resources
+CREATE INDEX idx_resource_venue_id ON resource(venue_id);
+-- Public resource filtering
+CREATE INDEX idx_resource_status ON resource(status);
+-- Combined venue + status
+CREATE INDEX idx_resource_venue_id_status ON resource(venue_id, status);
+```
+
+**Booking**:
+```sql
+-- Availability queries
+CREATE INDEX idx_booking_resource_date ON booking(resource_id, booking_date);
+-- User booking history
+CREATE INDEX idx_booking_player_date ON booking(player_id, booking_date);
+-- Expiration job (partial indexes)
+CREATE INDEX idx_booking_pending_expires 
+    ON booking(expires_at) WHERE status = 'PENDING_PAYMENT';
+CREATE INDEX idx_booking_pending_match_expires 
+    ON booking(expires_at) WHERE status = 'PENDING_MATCH';
+```
+
+**Match Request**:
+```sql
+-- User's matches
+CREATE INDEX idx_match_request_organizer ON match_request(organizer_id);
+-- Token lookup
+CREATE INDEX idx_match_request_token ON match_request(invitation_token);
+-- Open match filtering (partial)
+CREATE INDEX idx_match_request_status ON match_request(status) WHERE status = 'OPEN';
+```
+
+</Accordion>
+
+### Geographic Indexes
+
+PostGIS uses **GiST indexes** for spatial queries:
+
+```sql
+-- Venue location search
+CREATE INDEX idx_venue_location ON venue USING GIST(location);
+
+-- City distance calculations
+CREATE INDEX idx_city_location ON city USING GIST(location);
+```
+
+**Usage Example**:
+
+```sql
+-- Find venues within 10km of Madrid center
+SELECT * FROM venue
+WHERE ST_DWithin(
+    location,
+    ST_SetSRID(ST_MakePoint(-3.7038, 40.4168), 4326)::geography,
+    10000  -- meters
+)
+AND status = 'ACTIVE';
+```
+
+## JPA Entity Mapping
+
+<Accordion title="Example JPA Entities">
+
+**Booking Entity**:
+
+```java
+@Entity
+@Table(name = "booking")
+public class BookingEntity {
+    @Id
+    private UUID id;
+    
+    @Column(name = "resource_id", nullable = false)
+    private UUID resourceId;
+    
+    @Column(name = "player_id", nullable = false)
+    private UUID playerId;
+    
+    @Column(name = "booking_date", nullable = false)
+    private LocalDate bookingDate;
+    
+    @Column(name = "start_time", nullable = false)
+    private LocalTime startTime;
+    
+    @Column(name = "end_time", nullable = false)
+    private LocalTime endTime;
+    
+    @Column(name = "price_paid", nullable = false)
+    private BigDecimal pricePaid;
+    
+    @Column(length = 3, nullable = false)
+    private String currency;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20, nullable = false)
+    private BookingStatusDb status;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", length = 20, nullable = false)
+    private PaymentStatusDb paymentStatus;
+    
+    @Column(name = "cancelled_at")
+    private Instant cancelledAt;
+    
+    @Column(name = "cancel_reason")
+    private String cancelReason;
+    
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
+    
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+    
+    @Column(name = "expires_at")
+    private Instant expiresAt;
+}
+```
+
+**Venue Entity with PostGIS**:
+
+```java
+@Entity
+@Table(name = "venue")
+public class VenueEntity {
+    @Id
+    private UUID id;
+    
+    @Column(name = "owner_id", nullable = false)
+    private UUID ownerId;
+    
+    @Column(length = 150, nullable = false)
+    private String name;
+    
+    @Column(columnDefinition = "TEXT")
+    private String description;
+    
+    private String street;
+    private String city;
+    private String country;
+    
+    @Column(name = "postal_code", length = 20)
+    private String postalCode;
+    
+    // PostGIS geography type
+    @Column(columnDefinition = "geography(Point,4326)")
+    private Point location;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30, nullable = false)
+    private VenueStatusDb status;
+    
+    @Column(name = "reject_reason", columnDefinition = "TEXT")
+    private String rejectReason;
+    
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
+    
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+    
+    // One-to-many relationship (not used in domain, for JPA queries)
+    @OneToMany(mappedBy = "venue", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<VenueImageEntity> images = new ArrayList<>();
+}
+```
+
+</Accordion>
+
+## Data Types
+
+### Common Types
+
+| Domain Concept | PostgreSQL Type | Java Type |
+|----------------|-----------------|----------|
+| ID | `UUID` | `UUID` |
+| Timestamp | `TIMESTAMPTZ` | `Instant` |
+| Date | `DATE` | `LocalDate` |
+| Time | `TIME` | `LocalTime` |
+| Money | `DECIMAL(8,2)` | `BigDecimal` |
+| Text | `TEXT` / `VARCHAR(n)` | `String` |
+| Boolean | `BOOLEAN` | `boolean` |
+| Enum | `VARCHAR(n)` + CHECK | `enum` |
+| Location | `geography(Point,4326)` | `Point` (JTS) |
+
+### Geographic Types
+
+**PostGIS Geography**:
+
+```sql
+-- WGS84 latitude/longitude
+location geography(Point, 4326)
+```
+
+**Java Mapping** (Hibernate Spatial):
+
+```java
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Coordinate;
+
+GeometryFactory gf = new GeometryFactory();
+Point point = gf.createPoint(new Coordinate(longitude, latitude));
+```
+
+## Query Patterns
+
+### Availability Check
+
+```sql
+-- Find available slots for a resource on a date
+SELECT start_time, end_time
+FROM resource_schedule rs
+WHERE rs.resource_id = :resourceId
+  AND rs.day_of_week = :dayOfWeek
+  AND NOT EXISTS (
+    SELECT 1 FROM booking b
+    WHERE b.resource_id = :resourceId
+      AND b.booking_date = :date
+      AND b.status IN ('CONFIRMED', 'PENDING_PAYMENT', 'PENDING_MATCH')
+      AND tsrange(
+            :date::timestamp + :startTime,
+            :date::timestamp + :endTime,
+            '[)'
+          ) && tsrange(
+            b.booking_date::timestamp + b.start_time,
+            b.booking_date::timestamp + b.end_time,
+            '[)'
+          )
+  );
+```
+
+### Geographic Search
+
+```sql
+-- Find venues within radius
+SELECT v.*, ST_Distance(v.location, :searchPoint::geography) AS distance
+FROM venue v
+WHERE v.status = 'ACTIVE'
+  AND ST_DWithin(v.location, :searchPoint::geography, :radiusMeters)
+ORDER BY distance;
+```
+
+### Match Eligible Players
+
+```sql
+-- Find players for match invitations
+SELECT up.*
+FROM user_profile up
+WHERE up.active = true
+  AND up.match_notifications_enabled = true
+  AND up.skill_level = :skillLevel
+  AND up.preferred_sport = :sport
+  AND up.match_banned_until IS NULL OR up.match_banned_until < NOW()
+  AND ST_DWithin(
+    (SELECT location FROM city WHERE id = up.city_id),
+    ST_SetSRID(ST_MakePoint(:searchLng, :searchLat), 4326)::geography,
+    :radiusMeters
+  )
+  AND up.id NOT IN (
+    SELECT player_id FROM match_player WHERE match_request_id = :matchId
+  );
+```
+
+## Transaction Management
+
+Transactions are managed at the **use case level**:
+
+```java
+@Service
+@Transactional  // All methods transactional by default
+public class CreateBookingService {
+    
+    @Transactional  // Explicit for clarity
+    public BookingId execute(CreateBookingCommand cmd) {
+        // 1. Validate resource availability
+        // 2. Create booking
+        // 3. Create payment
+        // All-or-nothing transaction
+    }
+    
+    @Transactional(readOnly = true)  // Optimization for queries
+    public List<Booking> findUserBookings(UserId userId) {
+        return bookingRepository.findByPlayerId(userId);
+    }
+}
+```
+
+## Database Configuration
+
+**Application Properties**:
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/hub_db
+    username: hub_user
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Flyway manages schema
+    properties:
+      hibernate:
+        dialect: org.hibernate.spatial.dialect.postgis.PostgisPG95Dialect
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+```
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Backend Modules" href="./modules">
+    Module architecture and structure
+  </Card>
+  <Card title="Domain Model" href="./domain-model">
+    Domain entities and value objects
+  </Card>
+</CardGroup>

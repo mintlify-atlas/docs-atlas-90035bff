@@ -1,0 +1,610 @@
+---
+title: 'Database Configuration'
+description: 'Set up and configure PostgreSQL with PostGIS for the Hub platform'
+---
+
+## Overview
+
+Hub uses PostgreSQL with PostGIS extension for spatial data support. The database stores venues, bookings, matches, users, and geographic data for location-based features.
+
+<Note>
+  PostGIS is required for geospatial queries like finding venues near a location.
+</Note>
+
+## Database Requirements
+
+- **PostgreSQL**: Version 16+ (recommended)
+- **PostGIS**: Version 3.4+
+- **Extensions**:
+  - `postgis` - Spatial data support
+  - `pgcrypto` - Cryptographic functions
+  - `btree_gist` - B-tree and GiST index support for constraints
+
+## Quick Start with Docker
+
+The easiest way to run PostgreSQL with PostGIS is using Docker:
+
+<Steps>
+  <Step title="Configure environment">
+    Create a `.env` file with database credentials:
+    
+    ```bash .env
+    POSTGRES_DB=hub_db
+    POSTGRES_USER=hub_user
+    POSTGRES_PASSWORD=your_secure_password
+    DB_HOST=postgres
+    DB_PORT=5432
+    DB_NAME=hub_db
+    DB_USER=hub_user
+    DB_PASSWORD=your_secure_password
+    DB_SSL_MODE=disable
+    ```
+  </Step>
+  
+  <Step title="Start PostgreSQL">
+    Use the provided Docker Compose configuration:
+    
+    ```bash Terminal
+    docker-compose up -d postgres
+    ```
+    
+    This starts a PostgreSQL container with PostGIS pre-installed.
+  </Step>
+  
+  <Step title="Verify connection">
+    Check that PostgreSQL is running:
+    
+    ```bash Terminal
+    docker ps | grep postgres
+    docker logs hub-postgres
+    ```
+  </Step>
+  
+  <Step title="Run migrations">
+    Migrations run automatically when the backend starts. Check logs for:
+    
+    ```
+    Flyway migration completed successfully
+    ```
+  </Step>
+</Steps>
+
+## Docker Compose Configuration
+
+The `docker-compose.yml` includes a PostgreSQL service with PostGIS:
+
+```yaml docker-compose.yml
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: hub-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:
+```
+
+<Note>
+  Data is persisted in the `postgres-data` volume. To reset the database, run:
+  ```bash
+  docker-compose down -v
+  ```
+</Note>
+
+## Manual PostgreSQL Setup
+
+If you're not using Docker, follow these steps:
+
+<Steps>
+  <Step title="Install PostgreSQL">
+    Install PostgreSQL 16+ on your system:
+    
+    <CodeGroup>
+    ```bash Ubuntu/Debian
+    sudo apt update
+    sudo apt install postgresql-16 postgresql-contrib-16
+    ```
+    
+    ```bash macOS (Homebrew)
+    brew install postgresql@16
+    brew services start postgresql@16
+    ```
+    
+    ```bash Windows
+    # Download installer from:
+    # https://www.postgresql.org/download/windows/
+    ```
+    </CodeGroup>
+  </Step>
+  
+  <Step title="Install PostGIS">
+    Install the PostGIS extension:
+    
+    <CodeGroup>
+    ```bash Ubuntu/Debian
+    sudo apt install postgresql-16-postgis-3
+    ```
+    
+    ```bash macOS (Homebrew)
+    brew install postgis
+    ```
+    
+    ```bash Windows
+    # Install via Stack Builder (included with PostgreSQL installer)
+    # Select PostGIS from the Spatial Extensions category
+    ```
+    </CodeGroup>
+  </Step>
+  
+  <Step title="Create database and user">
+    Connect to PostgreSQL and create the database:
+    
+    ```sql SQL
+    -- Connect as postgres superuser
+    psql -U postgres
+    
+    -- Create user
+    CREATE USER hub_user WITH PASSWORD 'your_secure_password';
+    
+    -- Create database
+    CREATE DATABASE hub_db OWNER hub_user;
+    
+    -- Grant privileges
+    GRANT ALL PRIVILEGES ON DATABASE hub_db TO hub_user;
+    ```
+  </Step>
+  
+  <Step title="Enable extensions">
+    Connect to the database and enable required extensions:
+    
+    ```sql SQL
+    -- Connect to the hub database
+    \c hub_db
+    
+    -- Enable extensions (Flyway will also run these)
+    CREATE EXTENSION IF NOT EXISTS postgis;
+    CREATE EXTENSION IF NOT EXISTS pgcrypto;
+    CREATE EXTENSION IF NOT EXISTS btree_gist;
+    
+    -- Verify extensions
+    \dx
+    ```
+  </Step>
+</Steps>
+
+## Environment Variables
+
+Configure these environment variables for database connectivity:
+
+<ParamField path="DB_HOST" type="string" required>
+  Database server hostname
+  
+  **Local**: `localhost`
+  
+  **Docker**: `postgres` (service name)
+  
+  **Production**: `your-db-host.com`
+</ParamField>
+
+<ParamField path="DB_PORT" type="string" required>
+  Database server port
+  
+  **Default**: `5432`
+</ParamField>
+
+<ParamField path="DB_NAME" type="string" required>
+  Database name
+  
+  **Example**: `hub_db`, `padelhub_production`
+</ParamField>
+
+<ParamField path="DB_USER" type="string" required>
+  Database user with read/write access
+</ParamField>
+
+<ParamField path="DB_PASSWORD" type="string" required>
+  Database user password
+  
+  <Warning>
+    Store securely and never commit to version control
+  </Warning>
+</ParamField>
+
+<ParamField path="DB_SSL_MODE" type="string">
+  SSL/TLS mode for database connections
+  
+  **Options**:
+  - `disable` - No SSL (local development)
+  - `require` - Require SSL, don't verify certificate
+  - `verify-ca` - Require SSL, verify certificate authority
+  - `verify-full` - Require SSL, verify certificate and hostname
+  
+  **Default**: `disable`
+  
+  <Note>
+    Use `require` or higher in production
+  </Note>
+</ParamField>
+
+## Connection Pool Configuration
+
+The application uses HikariCP for connection pooling:
+
+```yaml application.yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSL_MODE:disable}&prepareThreshold=0
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    hikari:
+      auto-commit: false
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+```
+
+<Note>
+  `auto-commit: false` improves performance by allowing explicit transaction management.
+</Note>
+
+## Database Schema
+
+The schema is managed by Flyway migrations located in `backend/src/main/resources/db/migration/`.
+
+### Migration Files
+
+- `V1__init.sql` - Initial schema: cities with PostGIS spatial data
+- `V2__users.sql` - User accounts and profiles
+- `V3__create_venue.sql` - Venues (padel clubs)
+- `V4__create_resource.sql` - Resources (padel courts)
+- `V5__create_booking.sql` - Booking system
+- `V6__create_payment.sql` - Payment tracking
+- `V7__create_match_request.sql` - Match requests and invitations
+- `V8__seed_dev_data.sql` - Development seed data
+
+### Key Tables
+
+<AccordionGroup>
+  <Accordion title="city">
+    Pre-populated table with Spanish cities and coordinates:
+    
+    ```sql
+    CREATE TABLE city (
+      id           BIGSERIAL PRIMARY KEY,
+      name         VARCHAR(100) NOT NULL,
+      country_code VARCHAR(3) NOT NULL DEFAULT 'ES',
+      latitude     DOUBLE PRECISION NOT NULL,
+      longitude    DOUBLE PRECISION NOT NULL,
+      location     geography(Point, 4326) NOT NULL
+    );
+    ```
+    
+    Contains 40 Spanish cities with PostGIS point geometries.
+  </Accordion>
+  
+  <Accordion title="users">
+    User accounts synchronized with Auth0:
+    
+    - `auth0_id` - Links to Auth0 user
+    - `email` - User email
+    - `name` - Display name
+    - `profile_picture` - Cloudinary URL
+    - `skill_level` - Padel skill level
+  </Accordion>
+  
+  <Accordion title="venue">
+    Padel clubs and facilities:
+    
+    - `name` - Venue name
+    - `city_id` - References city table
+    - `location` - PostGIS point for geospatial queries
+    - `photos` - Array of Cloudinary URLs
+    - `manager_id` - User who manages the venue
+  </Accordion>
+  
+  <Accordion title="resource">
+    Individual padel courts:
+    
+    - `venue_id` - Parent venue
+    - `name` - Court name (e.g., "Court 1")
+    - `surface_type` - Court surface
+    - `is_indoor` - Indoor/outdoor flag
+  </Accordion>
+  
+  <Accordion title="booking">
+    Court reservations:
+    
+    - `resource_id` - Court being booked
+    - `user_id` - User making the booking
+    - `start_time` - Booking start
+    - `end_time` - Booking end
+    - `status` - PENDING, CONFIRMED, CANCELLED
+    - Constraint: No overlapping bookings per resource
+  </Accordion>
+</AccordionGroup>
+
+## Flyway Migrations
+
+Flyway automatically manages database schema versions.
+
+### Configuration
+
+```yaml application.yaml
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Ensures schema matches entities
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+```
+
+<Warning>
+  **Never** set `ddl-auto` to `create` or `update` in production. Always use Flyway migrations.
+</Warning>
+
+### Creating Migrations
+
+To add a new migration:
+
+<Steps>
+  <Step title="Create SQL file">
+    Create a new file following Flyway naming convention:
+    
+    ```
+    V{version}__{description}.sql
+    ```
+    
+    Example: `V9__add_user_preferences.sql`
+  </Step>
+  
+  <Step title="Write migration">
+    ```sql V9__add_user_preferences.sql
+    ALTER TABLE users ADD COLUMN notification_enabled BOOLEAN DEFAULT true;
+    ALTER TABLE users ADD COLUMN preferred_language VARCHAR(5) DEFAULT 'es';
+    
+    CREATE INDEX idx_users_language ON users(preferred_language);
+    ```
+  </Step>
+  
+  <Step title="Test migration">
+    Restart the application. Flyway will detect and run the new migration:
+    
+    ```
+    INFO : Migrating schema "public" to version "9 - add user preferences"
+    INFO : Successfully applied 1 migration
+    ```
+  </Step>
+</Steps>
+
+### Migration Best Practices
+
+- Make migrations **idempotent** when possible
+- Use `IF NOT EXISTS` for CREATE statements
+- Test migrations on a copy of production data
+- Never modify existing migration files
+- Include rollback scripts for complex migrations
+
+## Geospatial Queries
+
+PostGIS enables location-based features:
+
+### Find Venues Near Location
+
+```sql
+-- Find venues within 10km of coordinates
+SELECT 
+  v.id,
+  v.name,
+  ST_Distance(v.location, ST_MakePoint(-3.7038, 40.4168)::geography) as distance_meters
+FROM venue v
+WHERE ST_DWithin(
+  v.location,
+  ST_MakePoint(-3.7038, 40.4168)::geography,
+  10000  -- 10km in meters
+)
+ORDER BY distance_meters;
+```
+
+### Find Nearest City
+
+```sql
+-- Find closest city to coordinates
+SELECT 
+  c.name,
+  ST_Distance(c.location, ST_MakePoint(-3.7038, 40.4168)::geography) as distance_meters
+FROM city c
+ORDER BY c.location <-> ST_MakePoint(-3.7038, 40.4168)::geography
+LIMIT 1;
+```
+
+<Note>
+  The `<->` operator uses the spatial index for fast nearest-neighbor queries.
+</Note>
+
+## Database Tools
+
+### pgAdmin (Included with Docker)
+
+A web-based PostgreSQL administration tool is included:
+
+```bash
+# Start pgAdmin
+docker-compose up -d pgadmin
+
+# Access at http://localhost:5050
+# Email: admin@hub.com
+# Password: admin
+```
+
+**Connect to database**:
+- Host: `postgres` (or `host.docker.internal` from host machine)
+- Port: `5432`
+- Database: `hub_db`
+- Username: From `POSTGRES_USER`
+- Password: From `POSTGRES_PASSWORD`
+
+### Command Line Tools
+
+<CodeGroup>
+
+```bash Connect to database
+docker exec -it hub-postgres psql -U hub_user -d hub_db
+```
+
+```bash Run SQL file
+docker exec -i hub-postgres psql -U hub_user -d hub_db < script.sql
+```
+
+```bash Backup database
+docker exec hub-postgres pg_dump -U hub_user hub_db > backup.sql
+```
+
+```bash Restore database
+docker exec -i hub-postgres psql -U hub_user -d hub_db < backup.sql
+```
+
+</CodeGroup>
+
+## Production Configuration
+
+### Security Checklist
+
+<Steps>
+  <Step title="Enable SSL">
+    Set `DB_SSL_MODE=require` or higher
+  </Step>
+  
+  <Step title="Use strong passwords">
+    Generate cryptographically secure passwords (min 32 characters)
+  </Step>
+  
+  <Step title="Restrict network access">
+    Use firewalls to limit database access to application servers only
+  </Step>
+  
+  <Step title="Enable connection pooling">
+    Configure appropriate pool sizes based on load:
+    ```yaml
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+    ```
+  </Step>
+  
+  <Step title="Regular backups">
+    Implement automated backups with point-in-time recovery
+  </Step>
+  
+  <Step title="Monitor performance">
+    Use PostgreSQL's `pg_stat_statements` extension to identify slow queries
+  </Step>
+</Steps>
+
+### Managed Database Providers
+
+For production, consider managed PostgreSQL services:
+
+- **AWS RDS for PostgreSQL** (with PostGIS)
+- **Azure Database for PostgreSQL**
+- **Google Cloud SQL for PostgreSQL**
+- **DigitalOcean Managed Databases**
+- **Supabase** (includes PostGIS by default)
+
+<Note>
+  Ensure your managed database provider supports PostGIS extension.
+</Note>
+
+## Monitoring
+
+### Health Check
+
+The application exposes a health check endpoint:
+
+```bash
+curl http://localhost:8080/actuator/health
+```
+
+Response:
+```json
+{
+  "status": "UP",
+  "components": {
+    "db": {
+      "status": "UP",
+      "details": {
+        "database": "PostgreSQL",
+        "validationQuery": "isValid()"
+      }
+    }
+  }
+}
+```
+
+### Common Issues
+
+<AccordionGroup>
+  <Accordion title="Connection refused">
+    **Error**: `Connection to localhost:5432 refused`
+    
+    **Solutions**:
+    - Check PostgreSQL is running: `docker ps | grep postgres`
+    - Verify `DB_HOST` and `DB_PORT` are correct
+    - Check firewall rules
+  </Accordion>
+  
+  <Accordion title="Authentication failed">
+    **Error**: `password authentication failed for user`
+    
+    **Solutions**:
+    - Verify `DB_USER` and `DB_PASSWORD` match PostgreSQL user
+    - Check `pg_hba.conf` authentication rules
+  </Accordion>
+  
+  <Accordion title="PostGIS extension missing">
+    **Error**: `extension "postgis" does not exist`
+    
+    **Solution**:
+    ```sql
+    CREATE EXTENSION postgis;
+    ```
+  </Accordion>
+  
+  <Accordion title="Migration checksum mismatch">
+    **Error**: `Validate failed: Migration checksum mismatch`
+    
+    **Solution**: Never modify existing migrations. Create a new migration to fix issues.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Integrations" icon="plug" href="/configuration/integrations">
+    Configure Cloudinary and Brevo
+  </Card>
+  <Card title="API Reference" icon="book" href="/api/introduction">
+    Explore API endpoints
+  </Card>
+  <Card title="Data Models" icon="diagram-project" href="/development/backend/domain-model">
+    Understand data structure
+  </Card>
+  <Card title="Deployment" icon="rocket" href="/development/deployment/docker">
+    Deploy to production
+  </Card>
+</CardGroup>

@@ -1,0 +1,315 @@
+---
+title: 'Player Guide'
+description: 'Complete guide for players using the Hub platform to book courts and find matches'
+icon: 'users'
+---
+
+## Welcome to Hub
+
+As a player on Hub, you can discover venues, book padel courts, find match partners, and manage your playing schedule. This guide covers everything you need to know.
+
+---
+
+## Getting Started
+
+<Steps>
+  <Step title="Complete Your Profile">
+    Navigate to **Settings** from your dashboard to update your profile information:
+    
+    - Add your skill level (Beginner, Intermediate, Advanced, Professional)
+    - Upload a profile photo
+    - Set your preferred playing location
+    - Configure notification preferences
+    
+    <Tip>A complete profile helps other players find you for matches and builds trust in the community.</Tip>
+  </Step>
+  
+  <Step title="Explore Venues">
+    Browse available venues in your area from the dashboard. You can:
+    
+    - View venues on a map
+    - Search by location and radius
+    - See venue details, amenities, and court availability
+    - View photos and reviews
+  </Step>
+  
+  <Step title="Make Your First Booking">
+    Select a venue, choose an available time slot, and complete your booking with secure payment processing.
+  </Step>
+</Steps>
+
+---
+
+## Booking Courts
+
+### Finding Available Slots
+
+<CardGroup cols={2}>
+  <Card title="Browse Venues" icon="location-dot">
+    Use the venue search to find courts near you. Filter by distance, price range, and amenities.
+  </Card>
+  
+  <Card title="Check Availability" icon="calendar">
+    View real-time slot availability for any date. Available slots are shown in green.
+  </Card>
+</CardGroup>
+
+### Creating a Booking
+
+<Steps>
+  <Step title="Select a Venue">
+    Click on any venue to view its resources (courts) and detailed information.
+  </Step>
+  
+  <Step title="Choose Date and Time">
+    Select your preferred date and click on an available time slot. Each slot shows:
+    
+    - Start and end time
+    - Duration (typically 60 or 90 minutes)
+    - Price for that time slot
+    - Court type and features
+  </Step>
+  
+  <Step title="Confirm and Pay">
+    Review your booking details and complete payment securely through Stripe. You'll receive:
+    
+    - Instant booking confirmation
+    - Email receipt
+    - Calendar invitation (if enabled)
+  </Step>
+</Steps>
+
+<Note>
+Payment is processed immediately. Cancellation policies vary by venue - check the venue's terms before booking.
+</Note>
+
+### Managing Your Bookings
+
+Access all your bookings from **Dashboard > Bookings**:
+
+- **Upcoming**: View all confirmed future bookings
+- **Past**: Review booking history
+- **Cancel**: Cancel bookings according to the venue's policy
+
+<Tip>Add bookings to your calendar by clicking the "Add to Calendar" button in your booking details.</Tip>
+
+---
+
+## Match Making
+
+Hub's intelligent match-making system helps you find players at your level for competitive games.
+
+### How Match Making Works
+
+<Accordion title="The Match-Making Flow">
+  1. **Search for Slots**: Find available courts that fit your schedule and location
+  2. **Create Match Request**: Book a slot and specify match format (2v2, 1v1) and skill level
+  3. **Payment Hold**: Your payment is held securely until the match is confirmed
+  4. **Find Players**: The system sends invitations to players matching your criteria
+  5. **Match Confirmed**: Once all spots are filled, your match is confirmed
+  6. **Play & Check-in**: Show up and check in using your phone's GPS
+</Accordion>
+
+### Creating a Match Request
+
+<Steps>
+  <Step title="Search Available Match Slots">
+    From the dashboard, click **Find a Match**. Set your search criteria:
+    
+    - **Location**: Enter your location or use GPS
+    - **Date & Time**: When you want to play
+    - **Duration**: Typical match length (60-90 minutes)
+    - **Format**: 2v2 (doubles) or 1v1 (singles)
+    - **Skill Level**: Your playing level
+    
+    The system will show all available slots matching your criteria.
+  </Step>
+  
+  <Step title="Select a Slot and Create Request">
+    Choose your preferred slot and click **Create Match Request**. You'll need to:
+    
+    - Confirm the booking details
+    - Add an optional message to potential players
+    - Complete payment (held until match is confirmed)
+  </Step>
+  
+  <Step title="Wait for Players">
+    The system automatically sends invitations to players in your area who match your skill level. You'll receive notifications as players accept.
+  </Step>
+  
+  <Step title="Match Confirmed">
+    Once all spots are filled, your match is confirmed and all players receive:
+    
+    - Match details and court location
+    - Opponent profiles
+    - Check-in instructions
+  </Step>
+</Steps>
+
+<Note>
+If the match isn't filled within 24 hours of the booking time, your payment will be automatically refunded.
+</Note>
+
+### Responding to Match Invitations
+
+Receive invitations from other players organizing matches:
+
+1. **View Invitation**: Check match details, location, time, and organizer profile
+2. **Accept or Decline**: Respond to the invitation
+3. **Join the Match**: If accepted, complete payment and you're in
+
+<Tip>Respond to invitations quickly - spots fill fast for popular time slots!</Tip>
+
+### Managing Your Matches
+
+From **Dashboard > Matches**, you can:
+
+- View all upcoming matches
+- See participant profiles
+- Check match location and time
+- Cancel (with restrictions) or report absence
+- View match history
+
+### Match Day
+
+<CardGroup cols={2}>
+  <Card title="Check In" icon="location-crosshairs">
+    Use the **Check In** button when you arrive at the venue. GPS verification confirms your attendance.
+  </Card>
+  
+  <Card title="Report Absence" icon="user-xmark">
+    Can't make it? Report your absence ASAP. The system will find a substitute and your spot may be penalized based on timing.
+  </Card>
+</CardGroup>
+
+<Warning>
+No-shows without reporting absence may result in temporary suspension from match-making.
+</Warning>
+
+### Match Policies
+
+<Accordion title="Cancellation Policy">
+  - **48+ hours before**: Full refund, leave match freely
+  - **24-48 hours before**: May incur cancellation fee
+  - **Under 24 hours**: Report absence to find substitute, fees apply
+  - **No-show**: Full charge + potential account restriction
+</Accordion>
+
+<Accordion title="Skill Level Guidelines">
+  - **Beginner**: New to padel, learning basics
+  - **Intermediate**: Comfortable with rules, developing strategy
+  - **Advanced**: Competitive player, strong technique
+  - **Professional**: Tournament-level play
+  
+  <Tip>Be honest about your skill level - it ensures better matches for everyone!</Tip>
+</Accordion>
+
+---
+
+## Profile & Settings
+
+### Profile Management
+
+Keep your profile up to date:
+
+- **Personal Info**: Name, email, phone number
+- **Avatar**: Profile photo (visible to other players)
+- **Skill Level**: Update as you improve
+- **Location**: Default search location
+- **Privacy**: Control what information is visible
+
+### Notification Settings
+
+Customize how you receive updates:
+
+- Match invitations
+- Booking confirmations
+- Match reminders (1 day, 1 hour before)
+- Cancellations and changes
+- Promotional offers
+
+---
+
+## Tips & Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Book Early" icon="clock">
+    Popular time slots (evenings, weekends) fill up quickly. Book in advance to secure your preferred times.
+  </Card>
+  
+  <Card title="Complete Your Profile" icon="user">
+    A complete profile with a photo increases your match invitation acceptance rate by 60%.
+  </Card>
+  
+  <Card title="Respond Quickly" icon="bolt">
+    Match invitations are sent to multiple players. Accept quickly to secure your spot.
+  </Card>
+  
+  <Card title="Be Reliable" icon="handshake">
+    Always show up for confirmed matches. Your reliability rating affects future match invitations.
+  </Card>
+</CardGroup>
+
+---
+
+## Troubleshooting
+
+<Accordion title="I can't see any available slots">
+  **Possible solutions:**
+  
+  - Expand your search radius
+  - Try different dates or times
+  - Check if you've filtered by price or specific venue
+  - Verify the venue is active (some venues have seasonal hours)
+</Accordion>
+
+<Accordion title="My booking payment failed">
+  **Check the following:**
+  
+  - Card has sufficient funds
+  - Card details are correct
+  - Card is enabled for online transactions
+  - Try a different payment method
+  - Contact your bank if the issue persists
+</Accordion>
+
+<Accordion title="I haven't received any match invitations">
+  **Try these steps:**
+  
+  - Verify your skill level is set correctly
+  - Expand your search radius in preferences
+  - Ensure notifications are enabled
+  - Check your spam folder for invitation emails
+  - Try creating your own match request
+</Accordion>
+
+<Accordion title="I need to cancel a confirmed match">
+  - Navigate to **Dashboard > Matches**
+  - Click on the match to view details
+  - Click **Report Absence** to notify other players
+  - The system will attempt to find a substitute
+  - Cancellation fees may apply based on timing
+</Accordion>
+
+<Accordion title="Check-in isn't working">
+  **Verify:**
+  
+  - Location services are enabled on your device
+  - You're within 100 meters of the venue
+  - GPS signal is strong (try moving outside if indoors)
+  - You're checking in within the allowed time window
+</Accordion>
+
+---
+
+## Support
+
+Need help? We're here for you:
+
+- **Help Center**: Browse FAQs and guides
+- **Contact Support**: Email support@hub.example.com
+- **Live Chat**: Available Mon-Fri, 9 AM - 6 PM
+
+<Card title="Emergency Cancellation" icon="phone">
+  If you need to cancel within 24 hours, contact support directly for assistance.
+</Card>

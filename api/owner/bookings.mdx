@@ -1,0 +1,217 @@
+---
+title: 'Bookings'
+description: 'View and manage bookings for your venues'
+---
+
+# Owner Bookings API
+
+As a venue owner, you can view all bookings made at your venues. These endpoints provide visibility into your business operations and help you track resource utilization.
+
+## List All My Venue Bookings
+
+Retrieve all bookings across all venues you own, with pagination support.
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.hub.com/api/owner/bookings?page=0&size=20" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.hub.com/api/owner/bookings?page=0&size=20',
+  {
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+const bookings = await response.json();
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="0">
+  Page number (0-indexed)
+</ParamField>
+
+<ParamField query="size" type="integer" default="20">
+  Number of bookings per page
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="string (UUID)" required>
+  Unique identifier for the booking
+</ResponseField>
+
+<ResponseField name="resourceId" type="string (UUID)" required>
+  ID of the booked resource (court)
+</ResponseField>
+
+<ResponseField name="playerId" type="string (UUID)" required>
+  ID of the player who made the booking
+</ResponseField>
+
+<ResponseField name="bookingDate" type="string (date)" required>
+  Date of the booking (ISO 8601 format: YYYY-MM-DD)
+</ResponseField>
+
+<ResponseField name="startTime" type="string (time)" required>
+  Start time of the booking (HH:mm:ss)
+</ResponseField>
+
+<ResponseField name="endTime" type="string (time)" required>
+  End time of the booking (HH:mm:ss)
+</ResponseField>
+
+<ResponseField name="pricePaid" type="number" required>
+  Amount paid by the player
+</ResponseField>
+
+<ResponseField name="currency" type="string" required>
+  Currency code (e.g., EUR, USD)
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Booking status: CONFIRMED, CANCELLED, EXPIRED
+</ResponseField>
+
+<ResponseField name="paymentStatus" type="string" required>
+  Payment status: PENDING, PAID, FAILED, REFUNDED
+</ResponseField>
+
+<ResponseField name="resourceName" type="string">
+  Name of the booked resource
+</ResponseField>
+
+<ResponseField name="venueName" type="string">
+  Name of the venue
+</ResponseField>
+
+<ResponseField name="venueCity" type="string">
+  City where the venue is located
+</ResponseField>
+
+### Example Response
+
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "resourceId": "660e8400-e29b-41d4-a716-446655440001",
+    "playerId": "770e8400-e29b-41d4-a716-446655440002",
+    "bookingDate": "2026-03-15",
+    "startTime": "10:00:00",
+    "endTime": "11:30:00",
+    "pricePaid": 25.00,
+    "currency": "EUR",
+    "status": "CONFIRMED",
+    "paymentStatus": "PAID",
+    "resourceName": "Court 1",
+    "venueName": "Padel Club Madrid",
+    "venueCity": "Madrid"
+  }
+]
+```
+
+---
+
+## List Bookings for Specific Venue
+
+Retrieve all bookings for a specific venue you own.
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.hub.com/api/owner/venues/{venueId}/bookings?page=0&size=20" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  `https://api.hub.com/api/owner/venues/${venueId}/bookings?page=0&size=20`,
+  {
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+const bookings = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="venueId" type="string (UUID)" required>
+  ID of the venue to retrieve bookings for
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="0">
+  Page number (0-indexed)
+</ParamField>
+
+<ParamField query="size" type="integer" default="20">
+  Number of bookings per page
+</ParamField>
+
+### Response
+
+Returns an array of booking objects with the same structure as "List All My Venue Bookings".
+
+---
+
+## Understanding Booking Status
+
+Bookings can have different statuses throughout their lifecycle:
+
+### Status Values
+
+- **CONFIRMED**: Booking is active and the player is expected to show up
+- **CANCELLED**: Booking was cancelled by the player
+- **EXPIRED**: Booking was not paid in time and expired
+
+### Payment Status Values
+
+- **PENDING**: Payment is being processed
+- **PAID**: Payment completed successfully
+- **FAILED**: Payment failed
+- **REFUNDED**: Payment was refunded (typically after cancellation)
+
+<Note>
+  Bookings are paginated to improve performance. Use the `page` and `size` parameters to navigate through large result sets. The default page size is 20 bookings.
+</Note>
+
+---
+
+## Use Cases
+
+### Revenue Tracking
+
+Sum the `pricePaid` field for all bookings with `paymentStatus: PAID` to calculate your revenue.
+
+```javascript
+const paidBookings = bookings.filter(b => b.paymentStatus === 'PAID');
+const totalRevenue = paidBookings.reduce((sum, b) => sum + b.pricePaid, 0);
+console.log(`Total Revenue: ${totalRevenue} ${bookings[0]?.currency}`);
+```
+
+### Resource Utilization
+
+Track which resources are most popular by grouping bookings by `resourceId`.
+
+### Daily Schedule
+
+Filter bookings by `bookingDate` to see your schedule for a specific day.
+
+```javascript
+const todayBookings = bookings.filter(
+  b => b.bookingDate === '2026-03-15' && b.status === 'CONFIRMED'
+);
+```
+
+<Note>
+  Owner endpoints provide read-only access to booking information. Owners cannot create or cancel bookings on behalf of players. Only players can create and cancel their own bookings.
+</Note>

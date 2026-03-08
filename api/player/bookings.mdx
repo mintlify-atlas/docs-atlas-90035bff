@@ -1,0 +1,326 @@
+---
+title: 'Player Bookings API'
+description: 'Manage court bookings as a player'
+---
+
+# Player Bookings API
+
+Manage your padel court bookings, create new reservations, and cancel existing bookings.
+
+## Get My Bookings
+
+Retrieve all bookings for the authenticated player.
+
+### Endpoint
+
+```
+GET /api/bookings/my
+```
+
+### Response
+
+Returns an array of booking objects.
+
+<ResponseField name="id" type="string (UUID)" required>
+  Unique identifier for the booking
+</ResponseField>
+
+<ResponseField name="resourceId" type="string (UUID)" required>
+  ID of the booked resource (court)
+</ResponseField>
+
+<ResponseField name="playerId" type="string (UUID)" required>
+  ID of the player who made the booking
+</ResponseField>
+
+<ResponseField name="bookingDate" type="string (date)" required>
+  Date of the booking in ISO format (YYYY-MM-DD)
+</ResponseField>
+
+<ResponseField name="startTime" type="string (time)" required>
+  Start time of the booking in ISO format (HH:MM:SS)
+</ResponseField>
+
+<ResponseField name="endTime" type="string (time)" required>
+  End time of the booking in ISO format (HH:MM:SS)
+</ResponseField>
+
+<ResponseField name="pricePaid" type="number" required>
+  Amount paid for the booking
+</ResponseField>
+
+<ResponseField name="currency" type="string" required>
+  Currency code (e.g., EUR, USD)
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Booking status: `PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`
+</ResponseField>
+
+<ResponseField name="paymentStatus" type="string" required>
+  Payment status: `PENDING`, `PAID`, `FAILED`, `REFUNDED`
+</ResponseField>
+
+<ResponseField name="cancelledAt" type="string (timestamp)">
+  Timestamp when the booking was cancelled (if applicable)
+</ResponseField>
+
+<ResponseField name="cancelReason" type="string">
+  Reason provided for cancellation
+</ResponseField>
+
+<ResponseField name="createdAt" type="string (timestamp)" required>
+  Timestamp when the booking was created
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string (timestamp)" required>
+  Timestamp when the booking was last updated
+</ResponseField>
+
+<ResponseField name="expiresAt" type="string (timestamp)">
+  Expiration timestamp for pending bookings
+</ResponseField>
+
+<ResponseField name="resourceName" type="string">
+  Name of the booked resource
+</ResponseField>
+
+<ResponseField name="venueName" type="string">
+  Name of the venue where the resource is located
+</ResponseField>
+
+<ResponseField name="venueCity" type="string">
+  City where the venue is located
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.hub.example.com/api/bookings/my" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+fetch('https://api.hub.example.com/api/bookings/my', {
+  method: 'GET',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+})
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "resourceId": "660e8400-e29b-41d4-a716-446655440001",
+    "playerId": "770e8400-e29b-41d4-a716-446655440002",
+    "bookingDate": "2026-03-15",
+    "startTime": "10:00:00",
+    "endTime": "11:30:00",
+    "pricePaid": 35.00,
+    "currency": "EUR",
+    "status": "CONFIRMED",
+    "paymentStatus": "PAID",
+    "cancelledAt": null,
+    "cancelReason": null,
+    "createdAt": "2026-03-08T12:34:56Z",
+    "updatedAt": "2026-03-08T12:35:10Z",
+    "expiresAt": null,
+    "resourceName": "Court 1",
+    "venueName": "Padel Center Madrid",
+    "venueCity": "Madrid"
+  }
+]
+```
+
+---
+
+## Create Booking
+
+Create a new court booking and initiate payment.
+
+### Endpoint
+
+```
+POST /api/bookings
+```
+
+### Request Body
+
+<ParamField body="resourceId" type="string (UUID)" required>
+  ID of the resource (court) to book
+</ParamField>
+
+<ParamField body="bookingDate" type="string (date)" required>
+  Date for the booking in ISO format (YYYY-MM-DD)
+</ParamField>
+
+<ParamField body="startTime" type="string (time)" required>
+  Start time for the booking in ISO format (HH:MM:SS)
+</ParamField>
+
+### Response
+
+<ResponseField name="booking" type="object" required>
+  The created booking object (same structure as in Get My Bookings)
+</ResponseField>
+
+<ResponseField name="clientSecret" type="string" required>
+  Payment client secret for completing the payment (Stripe integration)
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.hub.example.com/api/bookings" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resourceId": "660e8400-e29b-41d4-a716-446655440001",
+    "bookingDate": "2026-03-20",
+    "startTime": "14:00:00"
+  }'
+```
+
+```javascript JavaScript
+fetch('https://api.hub.example.com/api/bookings', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    resourceId: '660e8400-e29b-41d4-a716-446655440001',
+    bookingDate: '2026-03-20',
+    startTime: '14:00:00'
+  })
+})
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "booking": {
+    "id": "880e8400-e29b-41d4-a716-446655440003",
+    "resourceId": "660e8400-e29b-41d4-a716-446655440001",
+    "playerId": "770e8400-e29b-41d4-a716-446655440002",
+    "bookingDate": "2026-03-20",
+    "startTime": "14:00:00",
+    "endTime": "15:30:00",
+    "pricePaid": 40.00,
+    "currency": "EUR",
+    "status": "PENDING",
+    "paymentStatus": "PENDING",
+    "cancelledAt": null,
+    "cancelReason": null,
+    "createdAt": "2026-03-08T15:30:00Z",
+    "updatedAt": "2026-03-08T15:30:00Z",
+    "expiresAt": "2026-03-08T15:45:00Z",
+    "resourceName": "Court 1",
+    "venueName": "Padel Center Madrid",
+    "venueCity": "Madrid"
+  },
+  "clientSecret": "pi_1ABC2DEF3GHI4JKL_secret_5MNO6PQR7STU8VWX"
+}
+```
+
+<Note>
+  The `clientSecret` should be used with your payment provider (Stripe) to complete the payment process. The booking will expire after 15 minutes if payment is not completed.
+</Note>
+
+---
+
+## Cancel Booking
+
+Cancel an existing booking.
+
+### Endpoint
+
+```
+PATCH /api/bookings/{id}/cancel
+```
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  ID of the booking to cancel
+</ParamField>
+
+### Request Body
+
+<ParamField body="reason" type="string">
+  Optional reason for cancelling the booking
+</ParamField>
+
+### Response
+
+Returns the updated booking object with cancellation details.
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X PATCH "https://api.hub.example.com/api/bookings/880e8400-e29b-41d4-a716-446655440003/cancel" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reason": "Unable to attend due to injury"
+  }'
+```
+
+```javascript JavaScript
+fetch('https://api.hub.example.com/api/bookings/880e8400-e29b-41d4-a716-446655440003/cancel', {
+  method: 'PATCH',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    reason: 'Unable to attend due to injury'
+  })
+})
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "id": "880e8400-e29b-41d4-a716-446655440003",
+  "resourceId": "660e8400-e29b-41d4-a716-446655440001",
+  "playerId": "770e8400-e29b-41d4-a716-446655440002",
+  "bookingDate": "2026-03-20",
+  "startTime": "14:00:00",
+  "endTime": "15:30:00",
+  "pricePaid": 40.00,
+  "currency": "EUR",
+  "status": "CANCELLED",
+  "paymentStatus": "REFUNDED",
+  "cancelledAt": "2026-03-08T16:00:00Z",
+  "cancelReason": "Unable to attend due to injury",
+  "createdAt": "2026-03-08T15:30:00Z",
+  "updatedAt": "2026-03-08T16:00:00Z",
+  "expiresAt": null,
+  "resourceName": "Court 1",
+  "venueName": "Padel Center Madrid",
+  "venueCity": "Madrid"
+}
+```
+
+<Note>
+  Cancellation policies may vary by venue. Refunds are typically processed automatically if the booking is cancelled within the allowed timeframe.
+</Note>

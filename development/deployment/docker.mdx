@@ -1,0 +1,349 @@
+---
+title: Docker Setup
+description: Set up Hub platform using Docker Compose for local development
+---
+
+The Hub platform uses Docker Compose to orchestrate multiple services for local development. This setup includes PostgreSQL with PostGIS, pgAdmin, and the Spring Boot backend.
+
+## Prerequisites
+
+Ensure you have the following installed:
+- Docker Engine 20.10+
+- Docker Compose v2.0+
+- Make (optional, for using Makefile commands)
+
+## Architecture
+
+The Docker Compose setup includes:
+
+- **PostgreSQL with PostGIS**: Main database with geographic data support
+- **pgAdmin**: Database administration interface
+- **Backend**: Spring Boot application (port 8080)
+- **Frontend**: Next.js application (commented out, runs separately)
+
+## Quick Start
+
+<Steps>
+  <Step title="Configure environment variables">
+    Create a `.env` file in the project root with the required variables:
+
+    ```bash .env
+    # Database Configuration
+    POSTGRES_DB=hub
+    POSTGRES_USER=hubuser
+    POSTGRES_PASSWORD=your_secure_password
+    DB_HOST=postgres
+    DB_PORT=5432
+
+    # Backend Port
+    BACKEND_PORT=8080
+
+    # Auth0 Configuration
+    AUTH0_ISSUER=https://your-domain.auth0.com/
+    AUTH0_AUDIENCE=your-api-audience
+
+    # Cloudinary Configuration
+    CLOUDINARY_CLOUD_NAME=your_cloud_name
+    CLOUDINARY_API_KEY=your_api_key
+    CLOUDINARY_API_SECRET=your_api_secret
+
+    # Email Configuration
+    APP_ADMIN_EMAIL=admin@yourdomain.com
+    MAIL_USERNAME=your_smtp_username
+    MAIL_PASSWORD=your_smtp_password
+    APP_MAIL_FROM=noreply@padelhub.com
+    ```
+
+    <Warning>
+      Never commit the `.env` file to version control. Keep your credentials secure.
+    </Warning>
+  </Step>
+
+  <Step title="Start all services">
+    Use Docker Compose or Make to start the services:
+
+    <CodeGroup>
+    ```bash Docker Compose
+    docker compose up -d
+    ```
+
+    ```bash Make
+    make up
+    ```
+    </CodeGroup>
+
+    The `-d` flag runs containers in detached mode (background).
+  </Step>
+
+  <Step title="Verify services are running">
+    Check the status of all containers:
+
+    <CodeGroup>
+    ```bash Docker Compose
+    docker compose ps
+    ```
+
+    ```bash Make
+    make ps
+    ```
+    </CodeGroup>
+
+    All services should show a healthy status.
+  </Step>
+
+  <Step title="Access the services">
+    Once running, access the services at:
+
+    - **Backend API**: http://localhost:8080
+    - **API Documentation**: http://localhost:8080/swagger-ui.html
+    - **pgAdmin**: http://localhost:5050 (login: admin@hub.com / admin)
+  </Step>
+</Steps>
+
+## Service Details
+
+### PostgreSQL Database
+
+The database uses the official PostGIS image with geographic extensions:
+
+```yaml
+postgres:
+  image: postgis/postgis:16-3.4
+  ports:
+    - "5432:5432"
+```
+
+**Features:**
+- PostgreSQL 16 with PostGIS 3.4
+- Health checks for dependency management
+- Persistent volume storage
+- Automatic restart unless stopped
+
+<Note>
+  The database includes a health check that ensures it's ready before dependent services start.
+</Note>
+
+### Backend Service
+
+The Spring Boot backend is built using a multi-stage Dockerfile:
+
+```dockerfile
+# Build stage
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /app
+COPY pom.xml .
+RUN mvn -q -DskipTests dependency:go-offline
+COPY src ./src
+RUN mvn -q -DskipTests package
+
+# Run stage
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java","-jar","app.jar"]
+```
+
+**Build optimizations:**
+- Maven dependency caching for faster rebuilds
+- Multi-stage build reduces final image size
+- Only JRE in runtime image (smaller footprint)
+
+### pgAdmin
+
+Web-based PostgreSQL administration tool:
+
+- **URL**: http://localhost:5050
+- **Default credentials**: admin@hub.com / admin
+- **Purpose**: Database management and query execution
+
+<Warning>
+  Change the pgAdmin default password in production environments.
+</Warning>
+
+## Common Commands
+
+### Using Make
+
+The project includes a Makefile with convenient shortcuts:
+
+```bash
+# Start all services
+make up
+
+# Stop all services
+make down
+
+# Restart all services
+make restart
+
+# View logs from all services
+make logs
+
+# View database logs only
+make logs-db
+
+# Open database shell
+make db-shell
+
+# Reset database (removes volumes)
+make db-reset
+```
+
+### Using Docker Compose
+
+Direct Docker Compose commands:
+
+<CodeGroup>
+```bash Start Services
+docker compose up -d
+```
+
+```bash Stop Services
+docker compose down
+```
+
+```bash View Logs
+docker compose logs -f
+```
+
+```bash Rebuild Services
+docker compose up -d --build
+```
+
+```bash Remove Volumes
+docker compose down -v
+```
+</CodeGroup>
+
+## Development Workflow
+
+### Backend Development
+
+For active backend development, you can run Spring Boot outside Docker:
+
+<Steps>
+  <Step title="Start database only">
+    ```bash
+    docker compose up -d postgres
+    ```
+  </Step>
+
+  <Step title="Update DB_HOST in .env">
+    ```bash
+    DB_HOST=localhost
+    ```
+  </Step>
+
+  <Step title="Run Spring Boot locally">
+    <CodeGroup>
+    ```bash Make
+    make backend-run
+    ```
+
+    ```bash Maven
+    cd backend && ./mvnw spring-boot:run
+    ```
+    </CodeGroup>
+  </Step>
+</Steps>
+
+<Note>
+  Running the backend locally provides faster reload times during development.
+</Note>
+
+### Rebuilding After Changes
+
+When you modify the backend code:
+
+```bash
+# Rebuild and restart the backend container
+docker compose up -d --build backend
+```
+
+## Troubleshooting
+
+### Database Connection Issues
+
+If the backend fails to connect to PostgreSQL:
+
+1. Check database health:
+   ```bash
+   docker compose ps postgres
+   ```
+
+2. View database logs:
+   ```bash
+   make logs-db
+   ```
+
+3. Verify environment variables are set correctly in `.env`
+
+### Port Conflicts
+
+If ports are already in use:
+
+1. Check what's using the port:
+   ```bash
+   sudo lsof -i :8080
+   sudo lsof -i :5432
+   ```
+
+2. Either stop the conflicting service or change the port in `.env`:
+   ```bash
+   BACKEND_PORT=8081
+   ```
+
+### Container Build Failures
+
+If the backend container fails to build:
+
+1. Clean Maven cache:
+   ```bash
+   make backend-clean
+   ```
+
+2. Rebuild without cache:
+   ```bash
+   docker compose build --no-cache backend
+   ```
+
+### Database Reset
+
+To completely reset the database:
+
+<Warning>
+  This will delete all data. Use with caution.
+</Warning>
+
+```bash
+make db-reset
+make up
+```
+
+## Volume Management
+
+Persistent data is stored in Docker volumes:
+
+- `postgres-data`: Database files
+- `pgadmin-data`: pgAdmin configuration
+
+### Backup Database Volume
+
+```bash
+docker run --rm -v hub_postgres-data:/data -v $(pwd):/backup \
+  ubuntu tar czf /backup/postgres-backup.tar.gz /data
+```
+
+### Restore Database Volume
+
+```bash
+docker run --rm -v hub_postgres-data:/data -v $(pwd):/backup \
+  ubuntu tar xzf /backup/postgres-backup.tar.gz -C /
+```
+
+## Next Steps
+
+- Configure [Production Deployment](/development/deployment/production)
+- Set up [Environment Variables](/development/deployment/production#environment-variables)
+- Review [Database Migrations](/development/backend/database)

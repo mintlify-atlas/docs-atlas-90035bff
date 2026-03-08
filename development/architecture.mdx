@@ -1,0 +1,378 @@
+---
+title: Architecture
+description: Understanding Hub's hexagonal/clean architecture design
+---
+
+## Architecture Overview
+
+Hub follows **Hexagonal Architecture** (also known as Ports and Adapters) combined with **Domain-Driven Design (DDD)** principles. This architecture ensures:
+
+- **Independence**: Business logic is independent of frameworks and external services
+- **Testability**: Core domain logic can be tested in isolation
+- **Flexibility**: Easy to swap infrastructure components without affecting business rules
+- **Maintainability**: Clear separation of concerns and dependencies
+
+## Project Structure
+
+The backend is organized into modules following a consistent structure:
+
+```
+backend/src/main/java/com/ccasro/hub/
+├── modules/              # Business modules
+│   ├── booking/         # Court booking management
+│   ├── matching/        # Player matching and games
+│   ├── venue/           # Venue and court management
+│   ├── iam/             # Identity and access management
+│   ├── resource/        # Resource management
+│   ├── media/           # Media upload and storage
+│   ├── admin/           # Admin operations
+│   └── security/        # Security configuration
+├── shared/              # Shared kernel
+│   ├── domain/         # Shared domain concepts
+│   └── infrastructure/ # Shared infrastructure
+└── infrastructure/      # Application-wide config
+    ├── config/         # Spring configuration
+    └── web/            # Web layer (controllers, filters)
+```
+
+## Module Structure
+
+Each business module follows the hexagonal architecture layers:
+
+```
+modules/[module-name]/
+├── domain/              # Core business logic (Inner hexagon)
+│   ├── model/          # Entities and aggregates
+│   ├── service/        # Domain services
+│   ├── event/          # Domain events
+│   └── exception/      # Domain-specific exceptions
+│
+├── application/         # Application layer
+│   ├── dto/            # Data transfer objects
+│   └── port/           # Port interfaces
+│       ├── in/         # Inbound ports (use cases)
+│       └── out/        # Outbound ports (dependencies)
+│
+├── usecases/           # Use case implementations
+│   └── *UseCase.java   # Concrete use case classes
+│
+└── infrastructure/      # Adapters (Outer hexagon)
+    ├── adapter/        # Outbound adapter implementations
+    ├── persistence/    # Database entities and repositories
+    ├── web/            # REST controllers (inbound adapters)
+    └── config/         # Module-specific configuration
+```
+
+## Architecture Layers
+
+### 1. Domain Layer (Core)
+
+The **innermost layer** contains pure business logic with no external dependencies.
+
+**Location**: `modules/[module]/domain/`
+
+**Responsibilities**:
+- Define business entities and value objects
+- Enforce business rules and invariants
+- Implement domain services
+- Define domain events
+
+**Example** (`booking/domain/`):
+```java
+// Entity
+public class Booking {
+  private BookingId id;
+  private ResourceId resourceId;
+  private TimeSlot timeSlot;
+  private BookingStatus status;
+  
+  // Business logic
+  public void cancel() {
+    if (status == BookingStatus.CONFIRMED) {
+      this.status = BookingStatus.CANCELLED;
+    } else {
+      throw new InvalidBookingStateException();
+    }
+  }
+}
+```
+
+<Note>
+  Domain layer has **zero dependencies** on frameworks or infrastructure. It only depends on Java standard library.
+</Note>
+
+### 2. Application Layer
+
+Defines **ports** (interfaces) that the domain needs or provides.
+
+**Location**: `modules/[module]/application/`
+
+**Responsibilities**:
+- Define DTOs for data transfer
+- Define inbound ports (what the application offers)
+- Define outbound ports (what the application needs)
+
+**Example** (`booking/application/port/`):
+```java
+// Inbound port (use case interface)
+public interface CreateBookingUseCase {
+  CreateBookingResult execute(CreateBookingCommand command);
+}
+
+// Outbound port (repository interface)
+public interface BookingRepository {
+  Booking save(Booking booking);
+  Optional<Booking> findById(BookingId id);
+}
+```
+
+### 3. Use Cases Layer
+
+Implements the **application logic** by coordinating domain objects.
+
+**Location**: `modules/[module]/usecases/`
+
+**Responsibilities**:
+- Implement inbound ports
+- Orchestrate domain objects
+- Use outbound ports to access infrastructure
+- Handle transactions
+
+**Example** (`booking/usecases/CreateBookingUseCase.java`):
+```java
+@Service
+public class CreateBookingUseCaseImpl implements CreateBookingUseCase {
+  
+  private final BookingRepository bookingRepository;
+  private final ResourceReadPort resourceReadPort;
+  
+  @Override
+  @Transactional
+  public CreateBookingResult execute(CreateBookingCommand command) {
+    // 1. Validate resource exists
+    Resource resource = resourceReadPort.findById(command.resourceId())
+      .orElseThrow(() -> new ResourceNotFoundException());
+    
+    // 2. Create domain object
+    Booking booking = Booking.create(
+      command.resourceId(),
+      command.timeSlot(),
+      command.userId()
+    );
+    
+    // 3. Save via outbound port
+    Booking saved = bookingRepository.save(booking);
+    
+    return CreateBookingResult.from(saved);
+  }
+}
+```
+
+### 4. Infrastructure Layer (Adapters)
+
+Implements **adapters** for external systems and frameworks.
+
+**Location**: `modules/[module]/infrastructure/`
+
+**Responsibilities**:
+- Implement outbound ports (repositories, external services)
+- Define inbound adapters (REST controllers)
+- Provide persistence entities (JPA)
+- Configure module-specific beans
+
+**Example** (`booking/infrastructure/`):
+```java
+// Persistence adapter (implements outbound port)
+@Repository
+public class JpaBookingRepository implements BookingRepository {
+  
+  private final SpringDataBookingRepository springRepo;
+  private final BookingMapper mapper;
+  
+  @Override
+  public Booking save(Booking booking) {
+    BookingEntity entity = mapper.toEntity(booking);
+    BookingEntity saved = springRepo.save(entity);
+    return mapper.toDomain(saved);
+  }
+}
+
+// REST controller (inbound adapter)
+@RestController
+@RequestMapping("/api/bookings")
+public class BookingController {
+  
+  private final CreateBookingUseCase createBookingUseCase;
+  
+  @PostMapping
+  public ResponseEntity<CreateBookingResult> create(
+    @RequestBody CreateBookingCommand command
+  ) {
+    CreateBookingResult result = createBookingUseCase.execute(command);
+    return ResponseEntity.ok(result);
+  }
+}
+```
+
+## Dependency Flow
+
+Dependencies **always point inward** toward the domain:
+
+```
+┌─────────────────────────────────────┐
+│   Infrastructure (Adapters)         │  ← Spring, JPA, REST
+│   - Controllers                     │
+│   - Repositories                    │
+│   - External services               │
+└──────────────┬──────────────────────┘
+               │ depends on
+               ▼
+┌─────────────────────────────────────┐
+│   Application (Ports)               │  ← Interfaces only
+│   - Use case interfaces             │
+│   - Port interfaces                 │
+│   - DTOs                            │
+└──────────────┬──────────────────────┘
+               │ depends on
+               ▼
+┌─────────────────────────────────────┐
+│   Domain (Business Logic)           │  ← Pure Java
+│   - Entities                        │
+│   - Value objects                   │
+│   - Domain services                 │
+│   - Business rules                  │
+└─────────────────────────────────────┘
+```
+
+<Note>
+  The domain layer **never depends** on outer layers. This is enforced through dependency inversion.
+</Note>
+
+## Key Modules
+
+### Booking Module
+Manages court bookings and reservations.
+
+**Key features**:
+- Create and cancel bookings
+- Time slot validation
+- Booking state management
+- Payment hold duration (5 minutes)
+
+### Matching Module
+Handles player matching and game creation.
+
+**Key features**:
+- Create and join games
+- Player matching logic
+- Game state management
+
+### Venue Module
+Manages venues and courts.
+
+**Key features**:
+- Venue registration
+- Court management
+- Operating hours
+- Geolocation support (PostGIS)
+
+### IAM Module
+Identity and access management.
+
+**Key features**:
+- User profiles
+- Role management
+- Auth0 integration
+
+### Resource Module
+Manages bookable resources (courts).
+
+**Key features**:
+- Resource availability
+- Pricing management
+
+### Media Module
+Handles file uploads and media storage.
+
+**Key features**:
+- Image upload to Cloudinary
+- Image transformation
+
+## Shared Kernel
+
+The `shared/` package contains code shared across modules:
+
+- **Value Objects**: `Email`, `PhoneNumber`, `Money`, `Coordinates`
+- **Domain Events**: Base event classes
+- **Security**: `SecurityContextHolder`, `CurrentUser`
+- **Ports**: Common port interfaces
+
+## Data Flow Example
+
+Here's how a booking creation request flows through the architecture:
+
+<Steps>
+  <Step title="HTTP Request">
+    Client sends `POST /api/bookings` with booking data
+  </Step>
+  
+  <Step title="Controller (Inbound Adapter)">
+    `BookingController` receives request and maps to `CreateBookingCommand`
+  </Step>
+  
+  <Step title="Use Case">
+    `CreateBookingUseCase` validates and orchestrates domain logic
+  </Step>
+  
+  <Step title="Domain Logic">
+    `Booking` entity is created with business rules enforced
+  </Step>
+  
+  <Step title="Repository (Outbound Adapter)">
+    `JpaBookingRepository` persists to PostgreSQL via JPA
+  </Step>
+  
+  <Step title="Response">
+    Controller returns `CreateBookingResult` as JSON
+  </Step>
+</Steps>
+
+## Benefits of This Architecture
+
+<CardGroup cols={2}>
+  <Card title="Testability" icon="flask">
+    Domain logic can be tested without databases or frameworks
+  </Card>
+  
+  <Card title="Maintainability" icon="wrench">
+    Clear boundaries make code easier to understand and modify
+  </Card>
+  
+  <Card title="Flexibility" icon="arrows-rotate">
+    Easy to swap databases, frameworks, or external services
+  </Card>
+  
+  <Card title="Team Scalability" icon="users">
+    Multiple teams can work on different modules independently
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+1. **Keep domain pure**: No Spring annotations or JPA in domain layer
+2. **Use value objects**: Wrap primitives in meaningful types
+3. **Dependency inversion**: Infrastructure implements ports defined in application layer
+4. **Single responsibility**: Each use case does one thing
+5. **Immutability**: Prefer immutable DTOs and value objects
+6. **Domain events**: Use events for cross-module communication
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Setup Guide" icon="rocket" href="/development/setup">
+    Set up your development environment
+  </Card>
+  <Card title="Tech Stack" icon="layer-group" href="/development/tech-stack">
+    Explore the technologies used
+  </Card>
+</CardGroup>

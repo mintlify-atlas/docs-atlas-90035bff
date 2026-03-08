@@ -1,0 +1,525 @@
+---
+title: 'Venue Owner Guide'
+description: 'Complete guide for venue owners to manage facilities, courts, bookings, and revenue'
+icon: 'building'
+---
+
+## Welcome Venue Owners
+
+Hub provides venue owners with powerful tools to manage your padel facility, optimize court utilization, and grow your business. This guide covers all aspects of venue management.
+
+---
+
+## Getting Started
+
+<Steps>
+  <Step title="Request Owner Access">
+    If you don't have owner access yet:
+    
+    1. Log in to your account
+    2. Navigate to **Profile > Request Owner Role**
+    3. Submit your request with business details
+    4. Wait for admin approval (typically 24-48 hours)
+    
+    <Note>You'll receive an email notification once your owner request is approved.</Note>
+  </Step>
+  
+  <Step title="Create Your First Venue">
+    Once approved, access the **Owner Dashboard** and click **Add Venue** to create your facility profile.
+  </Step>
+  
+  <Step title="Add Courts (Resources)">
+    Add your courts to the venue with scheduling and pricing information.
+  </Step>
+  
+  <Step title="Go Live">
+    Submit your venue and courts for admin approval. Once approved, they'll be visible to players.
+  </Step>
+</Steps>
+
+---
+
+## Venue Management
+
+### Creating a Venue
+
+Navigate to **Owner Dashboard > Venues > Create Venue**:
+
+<Steps>
+  <Step title="Basic Information">
+    Enter venue details:
+    
+    - **Name**: Your facility's name
+    - **Description**: Detailed description of your facility, amenities, and features
+    - **Location**: Full address with GPS coordinates
+    
+    <Tip>Include keywords in your description like "indoor courts", "lighting", "parking", "changing rooms" to improve discoverability.</Tip>
+  </Step>
+  
+  <Step title="Location Details">
+    Provide accurate address information:
+    
+    - Street address
+    - City
+    - Postal code
+    - Country
+    - Latitude and longitude (auto-filled from address)
+  </Step>
+  
+  <Step title="Submit for Review">
+    Your venue will be submitted to administrators for approval. Approval typically takes 24-48 hours.
+  </Step>
+</Steps>
+
+### Venue Status States
+
+<CardGroup cols={2}>
+  <Card title="Pending" icon="clock" color="yellow">
+    Awaiting admin approval. Not visible to players yet.
+  </Card>
+  
+  <Card title="Active" icon="check" color="green">
+    Approved and visible to players for bookings.
+  </Card>
+  
+  <Card title="Suspended" icon="pause" color="orange">
+    Temporarily unavailable. Not visible to players.
+  </Card>
+  
+  <Card title="Rejected" icon="xmark" color="red">
+    Not approved by admin. Check rejection reason and resubmit.
+  </Card>
+</CardGroup>
+
+### Updating Venue Information
+
+From **Venues > [Your Venue] > Edit**:
+
+- Update venue description and details
+- Modify address or location
+- Changes to active venues may require re-approval
+
+### Managing Venue Images
+
+High-quality photos increase booking rates by up to 40%.
+
+<Steps>
+  <Step title="Upload Images">
+    Click **Add Image** in your venue details. Images are uploaded to Cloudinary for optimization.
+  </Step>
+  
+  <Step title="Best Practices">
+    - Upload at least 5-7 images
+    - Include: exterior, courts, facilities, parking, changing rooms
+    - Use high-resolution images (min 1200px width)
+    - Show courts from multiple angles
+  </Step>
+  
+  <Step title="Manage Images">
+    Reorder images (first image is the main photo) or delete outdated images.
+  </Step>
+</Steps>
+
+<Tip>Update photos seasonally and after facility improvements to keep your listing fresh.</Tip>
+
+### Suspending Your Venue
+
+Need to temporarily close? From **Venues > [Your Venue]**:
+
+1. Click **Suspend Venue**
+2. Your venue becomes invisible to new bookings
+3. Existing bookings are honored
+4. Click **Reactivate** when ready to accept bookings again
+
+<Warning>
+Suspending a venue does not cancel existing bookings. Contact players directly if you need to cancel bookings due to closure.
+</Warning>
+
+---
+
+## Resource (Court) Management
+
+Resources are your bookable courts. Each resource has its own schedule, pricing, and availability.
+
+### Creating a Resource
+
+<Steps>
+  <Step title="Navigate to Resources">
+    Go to **Owner Dashboard > Resources > Add Resource**
+  </Step>
+  
+  <Step title="Basic Details">
+    Configure your court:
+    
+    - **Name**: "Court 1", "Center Court", etc.
+    - **Description**: Court features (indoor/outdoor, lighting, surface type)
+    - **Type**: "PADEL_COURT" (more types coming soon)
+    - **Slot Duration**: 60, 90, or 120 minutes
+    
+    <Note>Slot duration determines the booking intervals. Most venues use 60 or 90 minutes.</Note>
+  </Step>
+  
+  <Step title="Assign to Venue">
+    Select which venue this resource belongs to.
+  </Step>
+  
+  <Step title="Submit for Approval">
+    Like venues, resources require admin approval before going live.
+  </Step>
+</Steps>
+
+### Setting Operating Hours
+
+Define when each court is available for booking:
+
+<Steps>
+  <Step title="Set Weekly Schedule">
+    For each day of the week:
+    
+    - **Opening Time**: When the court opens (e.g., 08:00)
+    - **Closing Time**: When the court closes (e.g., 22:00)
+    - Leave blank for days when the court is closed
+  </Step>
+  
+  <Step title="Special Days">
+    You can override schedule for holidays or special events (coming soon).
+  </Step>
+</Steps>
+
+<Tip>Consider extending hours during peak seasons (summer, holidays) to maximize revenue.</Tip>
+
+### Pricing Strategy
+
+Set flexible pricing based on time of day and day type:
+
+<Steps>
+  <Step title="Add Price Rules">
+    Navigate to **Resources > [Your Court] > Pricing**
+    
+    Click **Add Price Rule** to create pricing tiers.
+  </Step>
+  
+  <Step title="Configure Rule">
+    Each rule includes:
+    
+    - **Day Type**: Weekday, Weekend, or Holiday
+    - **Time Range**: Start and end time (e.g., 18:00 - 22:00)
+    - **Price**: Amount in your currency
+    - **Currency**: EUR, USD, etc.
+  </Step>
+  
+  <Step title="Priority and Conflicts">
+    If multiple rules apply to a slot, the most specific rule wins. More specific time ranges take priority.
+  </Step>
+</Steps>
+
+#### Example Pricing Strategy
+
+<CodeGroup>
+```json Weekday Pricing
+{
+  "rules": [
+    {
+      "dayType": "WEEKDAY",
+      "timeRange": "08:00-17:00",
+      "price": 25.00,
+      "description": "Off-peak daytime"
+    },
+    {
+      "dayType": "WEEKDAY",
+      "timeRange": "17:00-22:00",
+      "price": 40.00,
+      "description": "Peak evening"
+    }
+  ]
+}
+```
+
+```json Weekend Pricing
+{
+  "rules": [
+    {
+      "dayType": "WEEKEND",
+      "timeRange": "08:00-22:00",
+      "price": 45.00,
+      "description": "Weekend rate"
+    }
+  ]
+}
+```
+</CodeGroup>
+
+<Tip>
+**Dynamic Pricing Tips:**
+- Charge more during peak hours (evenings, weekends)
+- Offer discounted morning rates to boost utilization
+- Adjust prices seasonally based on demand
+</Tip>
+
+### Managing Resource Availability
+
+<Accordion title="Suspending a Resource">
+  Need to take a court offline for maintenance?
+  
+  1. Go to **Resources > [Your Court]**
+  2. Click **Suspend Resource**
+  3. Court becomes unavailable for new bookings
+  4. Existing bookings are preserved
+  5. Click **Reactivate** when ready
+</Accordion>
+
+<Accordion title="Modifying Schedules">
+  Changes to operating hours take effect immediately for future dates. Existing bookings are not affected.
+</Accordion>
+
+### Resource Images
+
+Add court-specific images:
+
+- Action shots of games
+- Court surface close-ups
+- Lighting and facility features
+- Different angles and perspectives
+
+---
+
+## Booking Management
+
+Monitor and manage all bookings across your venues.
+
+### Viewing Bookings
+
+Access bookings from **Owner Dashboard > Bookings**:
+
+<CardGroup cols={3}>
+  <Card title="All Bookings" icon="list">
+    View bookings across all your venues and courts.
+  </Card>
+  
+  <Card title="By Venue" icon="filter">
+    Filter bookings by specific venue.
+  </Card>
+  
+  <Card title="By Date" icon="calendar">
+    View bookings for specific date ranges.
+  </Card>
+</CardGroup>
+
+### Booking Information
+
+Each booking shows:
+
+- **Player Details**: Name, email, phone (if provided)
+- **Court & Time**: Which resource, date, time
+- **Status**: Confirmed, Completed, Cancelled
+- **Payment**: Amount paid, payment status
+- **Booking Reference**: Unique ID for support inquiries
+
+### Booking States
+
+<Steps>
+  <Step title="Pending Payment">
+    Booking created but payment not completed. Auto-cancelled if payment fails.
+  </Step>
+  
+  <Step title="Confirmed">
+    Payment successful, booking is active. Player will arrive at scheduled time.
+  </Step>
+  
+  <Step title="Completed">
+    Booking time has passed. Payment is settled to your account.
+  </Step>
+  
+  <Step title="Cancelled">
+    Booking cancelled by player or system. Refund processed according to policy.
+  </Step>
+</Steps>
+
+<Note>
+You cannot directly cancel player bookings. Players must cancel through their dashboard. For emergency cancellations, contact support.
+</Note>
+
+---
+
+## Revenue & Analytics
+
+### Dashboard Overview
+
+Your **Owner Dashboard** displays key metrics:
+
+<CardGroup cols={2}>
+  <Card title="Today's Revenue" icon="dollar-sign">
+    Total revenue from bookings today.
+  </Card>
+  
+  <Card title="This Month" icon="calendar-days">
+    Month-to-date revenue and booking count.
+  </Card>
+  
+  <Card title="Court Utilization" icon="chart-line">
+    Percentage of available slots that are booked.
+  </Card>
+  
+  <Card title="Upcoming Bookings" icon="clock">
+    Number of confirmed bookings in the next 7 days.
+  </Card>
+</CardGroup>
+
+### Payment Processing
+
+- **Payment Processor**: Stripe
+- **Settlement**: Revenue is transferred to your bank account according to Stripe's schedule (typically 2-7 business days)
+- **Platform Fee**: Hub charges a commission on each booking (see your agreement)
+- **Refunds**: Processed automatically for cancellations according to your cancellation policy
+
+<Tip>Connect your Stripe account in **Settings > Payments** to receive payouts.</Tip>
+
+---
+
+## Best Practices
+
+### Optimize Your Listing
+
+<Steps>
+  <Step title="Complete Your Profile">
+    - Add detailed descriptions
+    - Upload 7+ high-quality photos
+    - List all amenities (parking, showers, equipment rental)
+    - Keep contact information current
+  </Step>
+  
+  <Step title="Competitive Pricing">
+    - Research competitor pricing in your area
+    - Use dynamic pricing for peak vs. off-peak
+    - Offer attractive morning and midday rates
+  </Step>
+  
+  <Step title="Maximize Availability">
+    - Set consistent operating hours
+    - Extend hours during high-demand periods
+    - Minimize court downtime
+  </Step>
+  
+  <Step title="Responsive Management">
+    - Monitor bookings daily
+    - Respond quickly to player issues
+    - Keep facility information updated
+  </Step>
+</Steps>
+
+### Increase Bookings
+
+<CardGroup cols={2}>
+  <Card title="Premium Photos" icon="camera">
+    Professional photos increase conversions by 40%. Invest in quality images.
+  </Card>
+  
+  <Card title="Flexible Pricing" icon="tags">
+    Dynamic pricing helps fill off-peak slots while maximizing peak revenue.
+  </Card>
+  
+  <Card title="Amenities" icon="star">
+    Highlight unique features: lighting, indoor courts, pro shop, equipment rental.
+  </Card>
+  
+  <Card title="Promotions" icon="percent">
+    Contact support about featuring your venue or running promotions.
+  </Card>
+</CardGroup>
+
+### Facility Maintenance
+
+<Accordion title="Scheduling Maintenance">
+  To block time for maintenance:
+  
+  1. Temporarily adjust court hours to exclude maintenance period
+  2. Or suspend the specific court for the day
+  3. Reactivate once maintenance is complete
+  
+  <Tip>Schedule maintenance during low-demand periods (weekday mornings) to minimize revenue impact.</Tip>
+</Accordion>
+
+---
+
+## Troubleshooting
+
+<Accordion title="My venue is not appearing in search">
+  **Check:**
+  
+  - Venue status is "Active" (not Pending or Suspended)
+  - At least one resource (court) is active
+  - Resource has configured schedule and pricing
+  - GPS coordinates are accurate
+  
+  If all above are correct, contact support.
+</Accordion>
+
+<Accordion title="No bookings are coming through">
+  **Verify:**
+  
+  - Pricing is competitive with area venues
+  - Operating hours cover peak demand times
+  - Photos are high-quality and appealing
+  - Venue description is complete and detailed
+  - Resources are set to Active status
+  
+  Consider running a promotion or adjusting pricing.
+</Accordion>
+
+<Accordion title="I need to cancel a player's booking">
+  Players manage their own cancellations. For emergency situations:
+  
+  - Contact the player directly using booking details
+  - If you need to cancel due to facility closure, contact Hub support
+  - Support can process cancellations and refunds on your behalf
+</Accordion>
+
+<Accordion title="Payment isn't being deposited">
+  **Check:**
+  
+  - Stripe account is connected in Settings
+  - Bank details in Stripe are correct and verified
+  - Account is not on hold (check Stripe dashboard)
+  - Review Stripe payout schedule (2-7 days typical)
+  
+  Contact Stripe support for payout issues.
+</Accordion>
+
+<Accordion title="How do I update my prices?">
+  1. Navigate to **Resources > [Your Court] > Pricing**
+  2. Add new price rules or modify existing ones
+  3. Delete old rules if needed
+  4. Changes take effect immediately for future bookings
+  
+  Existing bookings keep their original price.
+</Accordion>
+
+---
+
+## Support & Resources
+
+<CardGroup cols={2}>
+  <Card title="Owner Support" icon="headset">
+    Dedicated support for venue owners:
+    owners@hub.example.com
+  </Card>
+  
+  <Card title="Payment Issues" icon="credit-card">
+    For Stripe and payout questions:
+    payments@hub.example.com
+  </Card>
+  
+  <Card title="Help Center" icon="book">
+    Browse guides, FAQs, and video tutorials
+  </Card>
+  
+  <Card title="Owner Community" icon="users">
+    Connect with other venue owners (coming soon)
+  </Card>
+</CardGroup>
+
+<Note>
+**Business Hours Support**: Monday-Friday, 9 AM - 6 PM CET
+
+Emergency issues: Contact support with "URGENT" in subject line
+</Note>

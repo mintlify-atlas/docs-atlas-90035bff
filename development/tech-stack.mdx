@@ -1,0 +1,368 @@
+---
+title: Tech Stack
+description: Complete overview of technologies and frameworks used in Hub
+---
+
+## Overview
+
+Hub is built with modern, production-ready technologies focused on developer experience, performance, and scalability.
+
+## Backend Stack
+
+### Core Framework
+
+<CardGroup cols={2}>
+  <Card title="Spring Boot" icon="leaf">
+    **Version**: 3.5.10
+    
+    Enterprise Java framework for building production-ready applications with minimal configuration.
+  </Card>
+  
+  <Card title="Java" icon="coffee">
+    **Version**: 21
+    
+    Modern Java with records, pattern matching, and virtual threads support.
+  </Card>
+</CardGroup>
+
+### Web & API
+
+| Technology | Version | Purpose |
+|------------|---------|----------|
+| **Spring Web** | 3.5.10 | RESTful API development |
+| **Spring WebFlux** | 3.5.10 | Reactive web client for external APIs |
+| **SpringDoc OpenAPI** | 2.8.9 | API documentation (Swagger UI) |
+| **Spring Validation** | 3.5.10 | Bean validation and request validation |
+
+<Note>
+  Access API documentation at `http://localhost:8080/swagger-ui.html` when running the backend.
+</Note>
+
+### Data & Persistence
+
+<CodeGroup>
+```yaml Database
+PostgreSQL: 16
+PostGIS: 3.4 (Geospatial extension)
+```
+
+```yaml ORM & Migration
+Spring Data JPA: 3.5.10
+Hibernate: 6.x (via Spring Boot)
+Hibernate Spatial: 6.x
+Flyway: Latest (via Spring Boot)
+```
+
+```yaml Connection Pool
+HikariCP: Auto-configured
+```
+</CodeGroup>
+
+**Key Features**:
+- **PostGIS**: Geospatial queries for venue location search
+- **Flyway**: Version-controlled database migrations (`db/migration`)
+- **Hibernate Spatial**: JTS geometry types for coordinates
+- **JPA Auditing**: Automatic `createdAt`/`updatedAt` tracking
+
+### Security & Authentication
+
+| Technology | Version | Purpose |
+|------------|---------|----------|
+| **Spring Security** | 3.5.10 | Security framework |
+| **OAuth2 Resource Server** | 3.5.10 | JWT token validation |
+| **Auth0** | External | Identity provider (JWT issuer) |
+
+**Security Configuration**:
+- JWT-based authentication via Auth0
+- Role-based access control (RBAC)
+- Stateless session management
+- CORS configuration for frontend
+
+### External Services
+
+<CardGroup cols={2}>
+  <Card title="Cloudinary" icon="cloud">
+    **Version**: 2.3.2
+    
+    Image upload, storage, and transformation service for venue photos and user avatars.
+  </Card>
+  
+  <Card title="Brevo (Sendinblue)" icon="envelope">
+    **API Integration**
+    
+    Transactional email service for booking confirmations and notifications.
+  </Card>
+</CardGroup>
+
+### Utilities & Tools
+
+| Technology | Version | Purpose |
+|------------|---------|----------|
+| **Lombok** | Latest | Reduce boilerplate (getters, constructors, builders) |
+| **Caffeine Cache** | Latest | In-memory caching for performance |
+| **Spring Actuator** | 3.5.10 | Health checks and monitoring endpoints |
+| **Thymeleaf** | 3.5.10 | Email template rendering |
+
+### Testing
+
+<CodeGroup>
+```yaml Test Framework
+JUnit 5: Latest
+Spring Boot Test: 3.5.10
+Mockito: Included in Spring Boot Test
+```
+
+```yaml Integration Testing
+Testcontainers: Latest
+Testcontainers PostgreSQL: Latest
+```
+</CodeGroup>
+
+**Testing Strategy**:
+- **Unit Tests**: Pure domain logic with no dependencies
+- **Integration Tests**: Use Testcontainers for real PostgreSQL
+- **API Tests**: Test controllers with `@SpringBootTest`
+
+### Build Tools
+
+| Tool | Version | Purpose |
+|------|---------|----------|
+| **Maven** | 3.x (via wrapper) | Dependency management and build |
+| **Maven Wrapper** | Included | Ensures consistent Maven version |
+| **Spotless** | 3.2.1 | Code formatting (Google Java Format) |
+| **Google Java Format** | 1.17.0 | Java code formatter |
+
+**Build Commands**:
+```bash
+./mvnw clean package      # Build JAR
+./mvnw test              # Run tests
+./mvnw spotless:apply    # Format code
+```
+
+## Frontend Stack
+
+### Core Framework
+
+<CardGroup cols={2}>
+  <Card title="Next.js" icon="react">
+    **Version**: 16.1.6
+    
+    React framework with server-side rendering, file-based routing, and API routes.
+  </Card>
+  
+  <Card title="React" icon="atom">
+    **Version**: 19.2.3
+    
+    Modern React with hooks, concurrent rendering, and server components.
+  </Card>
+</CardGroup>
+
+### UI & Styling
+
+| Technology | Version | Purpose |
+|------------|---------|----------|
+| **Tailwind CSS** | 4.2.0 | Utility-first CSS framework |
+| **Radix UI** | Latest | Accessible, unstyled UI primitives |
+| **shadcn/ui** | 3.8.5 | Pre-built components based on Radix |
+| **Lucide React** | 0.575.0 | Icon library |
+| **class-variance-authority** | 0.7.1 | Component variants and styles |
+| **tailwind-merge** | 3.5.0 | Merge Tailwind classes intelligently |
+
+**Component Libraries Used**:
+- Dialogs, Dropdowns, Tooltips (Radix UI)
+- Forms, Buttons, Cards (shadcn/ui)
+- Charts (Recharts)
+- Carousels (Embla Carousel)
+
+### Authentication
+
+<Card title="Auth0 Next.js SDK" icon="shield">
+  **Version**: 4.15.0
+  
+  Official Auth0 SDK for Next.js with automatic session management and route protection.
+</Card>
+
+**Features**:
+- Automatic token refresh
+- Protected API routes
+- Server-side session management
+- Role-based access control
+
+### Forms & Validation
+
+| Technology | Version | Purpose |
+|------------|---------|----------|
+| **React Hook Form** | 7.71.2 | Performant form library |
+| **Zod** | 4.3.6 | TypeScript-first schema validation |
+| **@hookform/resolvers** | 5.2.2 | Zod integration for React Hook Form |
+
+**Example Usage**:
+```typescript
+const schema = z.object({
+  email: z.string().email(),
+  courtId: z.string().uuid(),
+});
+
+const form = useForm({
+  resolver: zodResolver(schema)
+});
+```
+
+### Maps & Geolocation
+
+<CardGroup cols={2}>
+  <Card title="Leaflet" icon="map">
+    **Version**: 1.9.4
+    
+    Open-source interactive maps for venue location display and search.
+  </Card>
+  
+  <Card title="Country State City" icon="globe">
+    **Version**: 3.2.1
+    
+    Location data for dropdowns and search filters.
+  </Card>
+</CardGroup>
+
+### UI Utilities
+
+| Technology | Version | Purpose |
+|------------|---------|----------|
+| **next-themes** | 0.4.6 | Dark mode support |
+| **date-fns** | 4.1.0 | Date manipulation and formatting |
+| **sonner** | 2.0.7 | Toast notifications |
+| **vaul** | 1.1.2 | Drawer component for mobile |
+| **cmdk** | 1.1.1 | Command palette (⌘K) |
+| **recharts** | 3.7.0 | Charts for analytics |
+
+### Development Tools
+
+<CodeGroup>
+```yaml TypeScript
+TypeScript: 5.9.3
+@types/react: 19.2.14
+@types/node: 20.19.33
+```
+
+```yaml Linting & Formatting
+ESLint: 9.x
+eslint-config-next: 16.1.6
+```
+
+```yaml Build
+PostCSS: 8.5.6
+Autoprefixer: 10.4.24
+```
+</CodeGroup>
+
+## Infrastructure
+
+### Docker & Containers
+
+<CodeGroup>
+```yaml Services
+PostgreSQL: postgis/postgis:16-3.4
+pgAdmin: dpage/pgadmin4
+Backend: Custom Dockerfile
+```
+
+```yaml Orchestration
+Docker Compose: Latest
+```
+</CodeGroup>
+
+**Containers**:
+- `hub-postgres`: PostgreSQL 16 with PostGIS 3.4
+- `hub-pgadmin`: Database management UI
+- `hub-backend`: Spring Boot application (optional)
+
+### Database
+
+| Feature | Technology |
+|---------|------------|
+| **RDBMS** | PostgreSQL 16 |
+| **Geospatial** | PostGIS 3.4 |
+| **Migrations** | Flyway |
+| **Connection Pool** | HikariCP |
+
+**PostgreSQL Extensions**:
+- `postgis`: Geospatial data types and functions
+- `uuid-ossp`: UUID generation (if needed)
+
+### Development Tools
+
+<CardGroup cols={2}>
+  <Card title="pgAdmin" icon="database">
+    Web-based PostgreSQL management
+    
+    Access: `http://localhost:5050`
+  </Card>
+  
+  <Card title="Swagger UI" icon="book">
+    Interactive API documentation
+    
+    Access: `http://localhost:8080/swagger-ui.html`
+  </Card>
+</CardGroup>
+
+## Monitoring & Observability
+
+### Spring Actuator Endpoints
+
+Enabled endpoints:
+- `/actuator/health` - Health check
+- `/actuator/info` - Application info
+- `/actuator/mappings` - Request mappings
+
+<Note>
+  Health details are hidden in production (`show-details: never`)
+</Note>
+
+## Caching Strategy
+
+| Technology | Use Case |
+|------------|----------|
+| **Caffeine** | In-memory caching for frequently accessed data |
+| **Spring Cache** | Declarative caching with `@Cacheable` |
+
+## Key Configuration Files
+
+| File | Purpose |
+|------|----------|
+| `backend/pom.xml` | Maven dependencies and plugins |
+| `backend/src/main/resources/application.yaml` | Spring configuration |
+| `docker-compose.yml` | Infrastructure services |
+| `Makefile` | Development commands |
+| `frontend/package.json` | npm dependencies |
+| `frontend/tailwind.config.ts` | Tailwind configuration |
+| `frontend/tsconfig.json` | TypeScript configuration |
+
+## Version Summary
+
+### Backend Core
+- Java **21**
+- Spring Boot **3.5.10**
+- PostgreSQL **16**
+- PostGIS **3.4**
+
+### Frontend Core
+- Next.js **16.1.6**
+- React **19.2.3**
+- TypeScript **5.9.3**
+- Tailwind CSS **4.2.0**
+
+### External Services
+- Auth0 (cloud)
+- Cloudinary (cloud)
+- Brevo (cloud)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Setup Guide" icon="rocket" href="/development/setup">
+    Set up your development environment
+  </Card>
+  <Card title="Architecture" icon="building" href="/development/architecture">
+    Learn about the hexagonal architecture
+  </Card>
+</CardGroup>

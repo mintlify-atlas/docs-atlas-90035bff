@@ -1,0 +1,481 @@
+---
+title: 'Venue Management'
+description: 'Manage venues, including creation, updates, and status changes'
+---
+
+## List Active Venues
+
+Retrieve all active venues with their resource counts.
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.hub.example/api/venues" \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.hub.example/api/venues', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+const venues = await response.json();
+```
+</CodeGroup>
+
+### Response
+
+<ResponseField name="id" type="string (UUID)" required>
+  Unique identifier for the venue
+</ResponseField>
+
+<ResponseField name="ownerId" type="string (UUID)" required>
+  ID of the venue owner
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Venue name
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Venue description
+</ResponseField>
+
+<ResponseField name="street" type="string" required>
+  Street address
+</ResponseField>
+
+<ResponseField name="city" type="string" required>
+  City
+</ResponseField>
+
+<ResponseField name="country" type="string" required>
+  Country
+</ResponseField>
+
+<ResponseField name="postalCode" type="string">
+  Postal/ZIP code
+</ResponseField>
+
+<ResponseField name="latitude" type="number" required>
+  Latitude coordinate
+</ResponseField>
+
+<ResponseField name="longitude" type="number" required>
+  Longitude coordinate
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Venue status (ACTIVE, SUSPENDED, PENDING_APPROVAL, REJECTED)
+</ResponseField>
+
+<ResponseField name="rejectReason" type="string">
+  Reason for rejection if status is REJECTED
+</ResponseField>
+
+<ResponseField name="images" type="array">
+  Array of venue images
+  <ResponseField name="id" type="string (UUID)">
+    Image identifier
+  </ResponseField>
+  <ResponseField name="url" type="string">
+    Image URL
+  </ResponseField>
+  <ResponseField name="publicId" type="string">
+    Public ID for CDN reference
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="resourceCount" type="integer">
+  Number of active resources at this venue
+</ResponseField>
+
+<ResponseField name="createdAt" type="string (ISO 8601)" required>
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string (ISO 8601)" required>
+  Last update timestamp
+</ResponseField>
+
+---
+
+## Get Venue by ID
+
+Retrieve detailed information about a specific venue.
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.hub.example/api/venues/{id}" \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const venueId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const response = await fetch(`https://api.hub.example/api/venues/${venueId}`, {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+const venue = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The unique identifier of the venue
+</ParamField>
+
+### Response
+
+Returns a single venue object with the same structure as the List Active Venues response.
+
+---
+
+## Create Venue (Owner)
+
+Create a new venue. Requires owner authentication.
+
+<Note>
+  This endpoint requires owner-level authentication. The venue will be associated with the authenticated user.
+</Note>
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.hub.example/api/owner/venues" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "name": "Padel Club Central",
+    "description": "Premier padel facility in the city center",
+    "street": "123 Main Street",
+    "city": "Barcelona",
+    "country": "Spain",
+    "postalCode": "08001",
+    "latitude": 41.3851,
+    "longitude": 2.1734
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.hub.example/api/owner/venues', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_TOKEN'
+  },
+  body: JSON.stringify({
+    name: 'Padel Club Central',
+    description: 'Premier padel facility in the city center',
+    street: '123 Main Street',
+    city: 'Barcelona',
+    country: 'Spain',
+    postalCode: '08001',
+    latitude: 41.3851,
+    longitude: 2.1734
+  })
+});
+
+const venue = await response.json();
+```
+</CodeGroup>
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Venue name (must not be blank)
+</ParamField>
+
+<ParamField body="description" type="string">
+  Detailed description of the venue
+</ParamField>
+
+<ParamField body="street" type="string" required>
+  Street address (must not be blank)
+</ParamField>
+
+<ParamField body="city" type="string" required>
+  City name (must not be blank)
+</ParamField>
+
+<ParamField body="country" type="string" required>
+  Country name (must not be blank)
+</ParamField>
+
+<ParamField body="postalCode" type="string">
+  Postal or ZIP code
+</ParamField>
+
+<ParamField body="latitude" type="number" required>
+  Latitude coordinate (-90 to 90)
+</ParamField>
+
+<ParamField body="longitude" type="number" required>
+  Longitude coordinate (-180 to 180)
+</ParamField>
+
+### Response
+
+Returns the created venue object (201 Created).
+
+---
+
+## Update Venue (Owner)
+
+Update an existing venue. Requires owner authentication.
+
+<CodeGroup>
+```bash cURL
+curl -X PUT "https://api.hub.example/api/owner/venues/{id}" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "name": "Padel Club Central Updated",
+    "description": "Updated description",
+    "street": "123 Main Street",
+    "city": "Barcelona",
+    "country": "Spain",
+    "postalCode": "08001",
+    "latitude": 41.3851,
+    "longitude": 2.1734
+  }'
+```
+
+```javascript JavaScript
+const venueId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const response = await fetch(`https://api.hub.example/api/owner/venues/${venueId}`, {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_TOKEN'
+  },
+  body: JSON.stringify({
+    name: 'Padel Club Central Updated',
+    description: 'Updated description',
+    street: '123 Main Street',
+    city: 'Barcelona',
+    country: 'Spain',
+    postalCode: '08001',
+    latitude: 41.3851,
+    longitude: 2.1734
+  })
+});
+
+const venue = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The unique identifier of the venue to update
+</ParamField>
+
+### Request Body
+
+Same as Create Venue request body.
+
+### Response
+
+Returns the updated venue object (200 OK).
+
+---
+
+## Suspend Venue (Owner)
+
+Temporarily suspend a venue, making it unavailable for bookings.
+
+<CodeGroup>
+```bash cURL
+curl -X PATCH "https://api.hub.example/api/owner/venues/{id}/suspend" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const venueId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const response = await fetch(`https://api.hub.example/api/owner/venues/${venueId}/suspend`, {
+  method: 'PATCH',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The unique identifier of the venue to suspend
+</ParamField>
+
+### Response
+
+Returns 204 No Content on success.
+
+---
+
+## Reactivate Venue (Owner)
+
+Reactivate a previously suspended venue.
+
+<CodeGroup>
+```bash cURL
+curl -X PATCH "https://api.hub.example/api/owner/venues/{id}/reactivate" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const venueId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const response = await fetch(`https://api.hub.example/api/owner/venues/${venueId}/reactivate`, {
+  method: 'PATCH',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The unique identifier of the venue to reactivate
+</ParamField>
+
+### Response
+
+Returns 204 No Content on success.
+
+---
+
+## Get My Venues (Owner)
+
+Retrieve all venues owned by the authenticated user.
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.hub.example/api/owner/venues" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.hub.example/api/owner/venues', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_TOKEN'
+  }
+});
+
+const myVenues = await response.json();
+```
+</CodeGroup>
+
+### Response
+
+Returns an array of venue objects associated with the authenticated owner.
+
+---
+
+## Add Venue Image (Owner)
+
+Add an image to a venue.
+
+<Note>
+  Images should be uploaded to your CDN (e.g., Cloudinary) first, then the URL and public ID should be submitted to this endpoint.
+</Note>
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.hub.example/api/owner/venues/{id}/images" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "url": "https://cdn.example.com/images/venue-court-1.jpg",
+    "publicId": "venues/venue_abc123"
+  }'
+```
+
+```javascript JavaScript
+const venueId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const response = await fetch(`https://api.hub.example/api/owner/venues/${venueId}/images`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_TOKEN'
+  },
+  body: JSON.stringify({
+    url: 'https://cdn.example.com/images/venue-court-1.jpg',
+    publicId: 'venues/venue_abc123'
+  })
+});
+
+const venue = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The unique identifier of the venue
+</ParamField>
+
+### Request Body
+
+<ParamField body="url" type="string" required>
+  Full URL to the image (must not be blank)
+</ParamField>
+
+<ParamField body="publicId" type="string" required>
+  Public identifier from your CDN (must not be blank)
+</ParamField>
+
+### Response
+
+Returns the updated venue object with the new image included.
+
+---
+
+## Delete Venue Image (Owner)
+
+Remove an image from a venue.
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE "https://api.hub.example/api/owner/venues/{id}/images/{imageId}" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const venueId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const imageId = 'img-1234-5678-abcd';
+const response = await fetch(
+  `https://api.hub.example/api/owner/venues/${venueId}/images/${imageId}`,
+  {
+    method: 'DELETE',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The unique identifier of the venue
+</ParamField>
+
+<ParamField path="imageId" type="string (UUID)" required>
+  The unique identifier of the image to remove
+</ParamField>
+
+### Response
+
+Returns 204 No Content on success.

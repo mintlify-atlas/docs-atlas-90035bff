@@ -1,0 +1,371 @@
+---
+title: 'Geospatial Search'
+description: 'Search for venues near a location using PostGIS-powered geospatial queries'
+---
+
+## Find Nearby Venues
+
+Search for active venues within a specified radius of a geographic location. This endpoint uses PostGIS geospatial indexing for efficient proximity searches.
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.hub.example/api/venues/nearby?lat=41.3851&lng=2.1734&radiusMeters=5000" \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const params = new URLSearchParams({
+  lat: '41.3851',
+  lng: '2.1734',
+  radiusMeters: '5000'
+});
+
+const response = await fetch(
+  `https://api.hub.example/api/venues/nearby?${params}`,
+  {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  }
+);
+
+const nearbyVenues = await response.json();
+```
+
+```python Python
+import requests
+
+params = {
+    'lat': 41.3851,
+    'lng': 2.1734,
+    'radiusMeters': 5000
+}
+
+response = requests.get(
+    'https://api.hub.example/api/venues/nearby',
+    params=params,
+    headers={'Content-Type': 'application/json'}
+)
+
+nearby_venues = response.json()
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="lat" type="number" required>
+  Latitude of the search center point (range: -90 to 90)
+  
+  Example: `41.3851` (Barcelona, Spain)
+</ParamField>
+
+<ParamField query="lng" type="number" required>
+  Longitude of the search center point (range: -180 to 180)
+  
+  Example: `2.1734` (Barcelona, Spain)
+</ParamField>
+
+<ParamField query="radiusMeters" type="number" default="5000">
+  Search radius in meters
+  
+  Default: 5000 (5 km)
+  
+  Examples:
+  - `1000` - 1 kilometer
+  - `5000` - 5 kilometers (default)
+  - `10000` - 10 kilometers
+</ParamField>
+
+### Response
+
+Returns an array of venue objects within the specified radius, sorted by distance from the search point.
+
+<ResponseField name="id" type="string (UUID)" required>
+  Unique identifier for the venue
+</ResponseField>
+
+<ResponseField name="ownerId" type="string (UUID)" required>
+  ID of the venue owner
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Venue name
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Venue description
+</ResponseField>
+
+<ResponseField name="street" type="string" required>
+  Street address
+</ResponseField>
+
+<ResponseField name="city" type="string" required>
+  City
+</ResponseField>
+
+<ResponseField name="country" type="string" required>
+  Country
+</ResponseField>
+
+<ResponseField name="postalCode" type="string">
+  Postal/ZIP code
+</ResponseField>
+
+<ResponseField name="latitude" type="number" required>
+  Latitude coordinate of the venue
+</ResponseField>
+
+<ResponseField name="longitude" type="number" required>
+  Longitude coordinate of the venue
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Venue status (only ACTIVE venues are returned)
+</ResponseField>
+
+<ResponseField name="rejectReason" type="string">
+  Reason for rejection (null for active venues)
+</ResponseField>
+
+<ResponseField name="images" type="array">
+  Array of venue images
+  <ResponseField name="id" type="string (UUID)">
+    Image identifier
+  </ResponseField>
+  <ResponseField name="url" type="string">
+    Image URL
+  </ResponseField>
+  <ResponseField name="publicId" type="string">
+    Public ID for CDN reference
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="resourceCount" type="integer">
+  Number of active resources at this venue (null in nearby search)
+</ResponseField>
+
+<ResponseField name="createdAt" type="string (ISO 8601)" required>
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string (ISO 8601)" required>
+  Last update timestamp
+</ResponseField>
+
+---
+
+## Example Searches
+
+### Search Near Barcelona City Center
+
+<CodeGroup>
+```bash cURL
+# Find venues within 2 km of Plaça de Catalunya
+curl -X GET "https://api.hub.example/api/venues/nearby?lat=41.3851&lng=2.1734&radiusMeters=2000" \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+// Barcelona city center
+const barcelona = { lat: 41.3851, lng: 2.1734 };
+
+const response = await fetch(
+  `https://api.hub.example/api/venues/nearby?lat=${barcelona.lat}&lng=${barcelona.lng}&radiusMeters=2000`,
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' }
+  }
+);
+
+const venues = await response.json();
+console.log(`Found ${venues.length} venues within 2km`);
+```
+</CodeGroup>
+
+### Search Near Madrid
+
+<CodeGroup>
+```bash cURL
+# Find venues within 10 km of Puerta del Sol, Madrid
+curl -X GET "https://api.hub.example/api/venues/nearby?lat=40.4168&lng=-3.7038&radiusMeters=10000" \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+// Madrid center
+const madrid = { lat: 40.4168, lng: -3.7038 };
+
+const response = await fetch(
+  `https://api.hub.example/api/venues/nearby?lat=${madrid.lat}&lng=${madrid.lng}&radiusMeters=10000`,
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' }
+  }
+);
+
+const venues = await response.json();
+```
+</CodeGroup>
+
+### Search with Default Radius
+
+<CodeGroup>
+```bash cURL
+# Uses default 5km radius
+curl -X GET "https://api.hub.example/api/venues/nearby?lat=51.5074&lng=-0.1278" \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+// London - uses default 5km radius
+const london = { lat: 51.5074, lng: -0.1278 };
+
+const response = await fetch(
+  `https://api.hub.example/api/venues/nearby?lat=${london.lat}&lng=${london.lng}`,
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' }
+  }
+);
+
+const venues = await response.json();
+```
+</CodeGroup>
+
+---
+
+## Geospatial Implementation
+
+<Note>
+  This endpoint leverages **PostGIS** spatial indexing for high-performance proximity searches. The database uses the `ST_DWithin` function to efficiently query venues within the specified radius.
+</Note>
+
+### How It Works
+
+1. **Coordinate System**: The API uses the WGS 84 coordinate system (SRID 4326) for latitude/longitude values
+2. **Distance Calculation**: PostGIS calculates great-circle distances on the Earth's surface
+3. **Spatial Index**: A GiST index on the coordinates column enables efficient geographic queries
+4. **Active Only**: Only venues with status `ACTIVE` are included in search results
+
+### Performance Characteristics
+
+- **Typical Response Time**: < 100ms for searches returning up to 100 venues
+- **Scalability**: Spatial index ensures logarithmic query time regardless of database size
+- **Accuracy**: Great-circle distance calculations accurate to within meters
+
+### Use Cases
+
+- **Mobile Apps**: "Find courts near me" feature using device GPS
+- **Map Interfaces**: Display venues on interactive maps with dynamic radius
+- **Location-Based Booking**: Show available courts within walking/driving distance
+- **Coverage Analysis**: Identify underserved areas for new venue opportunities
+
+---
+
+## Common Coordinate Examples
+
+<table>
+  <thead>
+    <tr>
+      <th>City</th>
+      <th>Latitude</th>
+      <th>Longitude</th>
+      <th>Example Query</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Barcelona, Spain</td>
+      <td>41.3851</td>
+      <td>2.1734</td>
+      <td>`?lat=41.3851&lng=2.1734&radiusMeters=5000`</td>
+    </tr>
+    <tr>
+      <td>Madrid, Spain</td>
+      <td>40.4168</td>
+      <td>-3.7038</td>
+      <td>`?lat=40.4168&lng=-3.7038&radiusMeters=5000`</td>
+    </tr>
+    <tr>
+      <td>London, UK</td>
+      <td>51.5074</td>
+      <td>-0.1278</td>
+      <td>`?lat=51.5074&lng=-0.1278&radiusMeters=5000`</td>
+    </tr>
+    <tr>
+      <td>Paris, France</td>
+      <td>48.8566</td>
+      <td>2.3522</td>
+      <td>`?lat=48.8566&lng=2.3522&radiusMeters=5000`</td>
+    </tr>
+    <tr>
+      <td>New York, USA</td>
+      <td>40.7128</td>
+      <td>-74.0060</td>
+      <td>`?lat=40.7128&lng=-74.0060&radiusMeters=5000`</td>
+    </tr>
+  </tbody>
+</table>
+
+---
+
+## Best Practices
+
+### Choosing the Right Radius
+
+- **Urban Areas**: 1-3 km (users willing to travel shorter distances)
+- **Suburban Areas**: 5-10 km (more spread out venues)
+- **Rural Areas**: 15-25 km (fewer venues, longer travel acceptable)
+
+### Client-Side Implementation
+
+```javascript
+// Get user's current location
+navigator.geolocation.getCurrentPosition(async (position) => {
+  const { latitude, longitude } = position.coords;
+  
+  // Search nearby venues
+  const response = await fetch(
+    `https://api.hub.example/api/venues/nearby?lat=${latitude}&lng=${longitude}&radiusMeters=5000`,
+    {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    }
+  );
+  
+  const venues = await response.json();
+  
+  // Display venues on map or list
+  displayVenues(venues);
+});
+```
+
+### Error Handling
+
+```javascript
+const searchNearby = async (lat, lng, radius = 5000) => {
+  // Validate coordinates
+  if (lat < -90 || lat > 90) {
+    throw new Error('Latitude must be between -90 and 90');
+  }
+  if (lng < -180 || lng > 180) {
+    throw new Error('Longitude must be between -180 and 180');
+  }
+  
+  const response = await fetch(
+    `https://api.hub.example/api/venues/nearby?lat=${lat}&lng=${lng}&radiusMeters=${radius}`,
+    {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    }
+  );
+  
+  if (!response.ok) {
+    throw new Error(`Search failed: ${response.status}`);
+  }
+  
+  return response.json();
+};
+```

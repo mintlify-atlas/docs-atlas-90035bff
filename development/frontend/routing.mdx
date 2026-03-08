@@ -1,0 +1,617 @@
+---
+title: 'Routing & Authentication'
+description: 'Next.js App Router patterns, Auth0 integration, and protected routes'
+---
+
+## Overview
+
+The Hub frontend uses **Next.js 16 App Router** with **Auth0** for authentication. The application implements role-based access control (RBAC) with three user roles: Player, Venue Owner, and Admin.
+
+## App Router Fundamentals
+
+### File-Based Routing
+
+Next.js App Router uses file system conventions:
+
+<CardGroup cols={2}>
+  <Card title="page.tsx" icon="file">
+    Creates a route endpoint
+  </Card>
+  <Card title="layout.tsx" icon="layer-group">
+    Wraps pages with shared UI
+  </Card>
+  <Card title="[param]" icon="brackets-curly">
+    Dynamic route segment
+  </Card>
+  <Card title="[...slug]" icon="ellipsis">
+    Catch-all route segment
+  </Card>
+</CardGroup>
+
+### Route Organization
+
+```
+app/
+├── page.tsx                    → /
+├── layout.tsx                  → Root layout
+├── dashboard/
+│   ├── page.tsx               → /dashboard
+│   ├── layout.tsx             → Dashboard layout
+│   ├── profile/
+│   │   └── page.tsx           → /dashboard/profile
+│   └── settings/
+│       └── page.tsx           → /dashboard/settings
+├── match/
+│   ├── search/
+│   │   └── page.tsx           → /match/search
+│   ├── create/
+│   │   └── page.tsx           → /match/create
+│   ├── [id]/
+│   │   └── page.tsx           → /match/:id
+│   └── join/
+│       └── [token]/
+│           └── page.tsx       → /match/join/:token
+├── venue/
+│   └── [id]/
+│       ├── page.tsx           → /venue/:id
+│       └── resource/
+│           └── [resourceId]/
+│               └── page.tsx   → /venue/:id/resource/:resourceId
+├── owner/
+│   ├── layout.tsx             → Owner layout
+│   ├── dashboard/
+│   │   └── page.tsx           → /owner/dashboard
+│   └── venues/
+│       └── page.tsx           → /owner/venues
+├── admin/
+│   ├── layout.tsx             → Admin layout (with auth check)
+│   ├── dashboard/
+│   │   └── page.tsx           → /admin/dashboard
+│   └── users/
+│       └── page.tsx           → /admin/users
+└── api/
+    └── proxy/
+        └── [...path]/
+            └── route.ts       → /api/proxy/*
+```
+
+## Authentication with Auth0
+
+### Auth0 Configuration
+
+<CodeGroup>
+```typescript lib/auth0.ts
+import {Auth0Client} from '@auth0/nextjs-auth0/server'
+
+export const auth0 = new Auth0Client({
+  domain: process.env.AUTH0_DOMAIN!,
+  clientId: process.env.AUTH0_CLIENT_ID!,
+  clientSecret: process.env.AUTH0_CLIENT_SECRET!,
+  appBaseUrl: process.env.AUTH0_BASE_URL!,
+  secret: process.env.AUTH0_SECRET!,
+  authorizationParameters: {
+    audience: process.env.AUTH0_AUDIENCE,
+    scope: 'openid profile email offline_access'
+  }
+})
+```
+
+```bash .env.local
+AUTH0_DOMAIN=your-domain.auth0.com
+AUTH0_CLIENT_ID=your_client_id
+AUTH0_CLIENT_SECRET=your_client_secret
+AUTH0_BASE_URL=http://localhost:3000
+AUTH0_SECRET=your_secret_key
+AUTH0_AUDIENCE=https://api.yourdomain.com
+API_URL=http://localhost:8000
+```
+</CodeGroup>
+
+### Session Management
+
+Auth0 manages sessions server-side:
+
+```typescript
+import {auth0} from '@/lib/auth0'
+
+// Get current session
+const session = await auth0.getSession()
+
+// Check if authenticated
+if (!session) {
+  redirect('/login')
+}
+
+// Access token for API calls
+const accessToken = session.tokenSet?.accessToken
+```
+
+## Protected Routes
+
+### Layout-Level Protection
+
+Implement authentication checks in layout components:
+
+<Tabs>
+  <Tab title="Admin Layout">
+    ```tsx app/admin/layout.tsx
+    import {AdminSidebar} from '@/components/admin/admin-sidebar'
+    import {UserProfile} from '@/types'
+    import {auth0} from '@/lib/auth0'
+    import {redirect} from 'next/navigation'
+    import {apiFetch} from '@/lib/api'
+    
+    export default async function AdminLayout({
+      children
+    }: {
+      children: React.ReactNode
+    }) {
+      // Check authentication
+      const session = await auth0.getSession()
+      if (!session) redirect('/')
+      
+      // Check authorization
+      const profile = await apiFetch<UserProfile>('/api/me')
+      if (profile.role !== 'ADMIN') redirect('/dashboard')
+      
+      return (
+        <div className="flex min-h-screen bg-background">
+          <AdminSidebar user={profile} />
+          <main className="flex-1 overflow-y-auto">
+            {children}
+          </main>
+        </div>
+      )
+    }
+    ```
+    All routes under `/admin/*` are protected by this layout.
+  </Tab>
+  <Tab title="Page-Level">
+    ```tsx app/match/search/page.tsx
+    import {auth0} from '@/lib/auth0'
+    import {redirect} from 'next/navigation'
+    import {apiFetch} from '@/lib/api'
+    import {MatchSearchClient} from '@/components/match/match-search-client'
+    import type {UserProfile} from '@/types'
+    
+    export default async function MatchSearchPage() {
+      // Authenticate at page level
+      const session = await auth0.getSession()
+      if (!session) redirect('/')
+      
+      // Fetch user data
+      const user = await apiFetch<UserProfile>('/api/me')
+      
+      // Pass to client component
+      return <MatchSearchClient user={user} />
+    }
+    ```
+    Individual pages can implement their own auth checks.
+  </Tab>
+</Tabs>
+
+<Note>
+  Layout-level protection is more efficient as it applies to all child routes and runs once per navigation.
+</Note>
+
+## Role-Based Access Control
+
+### User Roles
+
+The application supports three roles:
+
+```typescript types/index.ts
+type UserRole = 'PLAYER' | 'OWNER' | 'ADMIN'
+
+interface UserProfile {
+  id: string
+  email: string
+  name: string
+  role: UserRole
+  city?: string
+  skillLevel?: string
+}
+```
+
+### Route Protection by Role
+
+<CardGroup cols={3}>
+  <Card title="Player (Default)" icon="user">
+    - /dashboard/*
+    - /match/*
+    - /venue/*
+    - /onboarding
+  </Card>
+  <Card title="Venue Owner" icon="building">
+    - /owner/*
+    - All Player routes
+  </Card>
+  <Card title="Admin" icon="shield">
+    - /admin/*
+    - All routes
+  </Card>
+</CardGroup>
+
+### Authorization Logic
+
+```typescript
+// Redirect based on role
+function getDefaultRoute(role: UserRole): string {
+  switch (role) {
+    case 'ADMIN':
+      return '/admin/dashboard'
+    case 'OWNER':
+      return '/owner/dashboard'
+    case 'PLAYER':
+    default:
+      return '/dashboard'
+  }
+}
+
+// Check role access
+function hasAccess(userRole: UserRole, requiredRole: UserRole): boolean {
+  const roleHierarchy = {
+    'ADMIN': 3,
+    'OWNER': 2,
+    'PLAYER': 1
+  }
+  return roleHierarchy[userRole] >= roleHierarchy[requiredRole]
+}
+```
+
+## API Routes
+
+### Proxy Route Handler
+
+All backend API calls are proxied through `/api/proxy/*`:
+
+<CodeGroup>
+```typescript app/api/proxy/[...path]/route.ts
+import {auth0} from '@/lib/auth0'
+import {NextRequest, NextResponse} from 'next/server'
+
+export const runtime = 'nodejs'
+
+const API_URL = process.env.API_URL
+if (!API_URL) throw new Error('API_URL is not set')
+
+async function handler(request: NextRequest) {
+  // Get session and token
+  const session = await auth0.getSession()
+  const token = session?.tokenSet?.accessToken
+  
+  if (!token) {
+    return NextResponse.json(
+      {message: 'Unauthorized'},
+      {status: 401}
+    )
+  }
+  
+  // Extract path from /api/proxy/...
+  const path = request.nextUrl.pathname.replace(/^\/api\/proxy/, '') || '/'
+  const url = new URL(path + request.nextUrl.search, API_URL)
+  
+  // Forward request with auth
+  const headers = new Headers()
+  headers.set('Authorization', `Bearer ${token}`)
+  headers.set('Accept-Encoding', 'identity')
+  
+  const ct = request.headers.get('content-type')
+  if (ct) headers.set('content-type', ct)
+  
+  const method = request.method
+  const hasBody = !['GET', 'HEAD'].includes(method)
+  
+  const upstream = await fetch(url, {
+    method,
+    headers,
+    body: hasBody ? request.body : undefined,
+    duplex: hasBody ? 'half' : undefined,
+    redirect: 'manual'
+  } as RequestInit)
+  
+  const body = await upstream.arrayBuffer()
+  
+  return new NextResponse(body, {
+    status: upstream.status,
+    headers: responseHeaders(upstream)
+  })
+}
+
+export const GET = handler
+export const POST = handler
+export const PUT = handler
+export const PATCH = handler
+export const DELETE = handler
+```
+
+```typescript Usage Example
+// Client-side API call
+import {apiFetchClient} from '@/lib/api'
+
+// Routes through /api/proxy/api/matches
+const matches = await apiFetchClient<Match[]>('/api/matches')
+
+// POST with body
+await apiFetchClient('/api/bookings', {
+  method: 'POST',
+  body: JSON.stringify({
+    resourceId: '123',
+    startTime: '2024-03-15T10:00:00Z'
+  })
+})
+```
+</CodeGroup>
+
+<Note>
+  The proxy route automatically handles authentication, CORS, and content negotiation. Client components never directly access the backend API.
+</Note>
+
+## Data Fetching Patterns
+
+### Server Component Fetching
+
+```tsx app/venue/[id]/page.tsx
+import {auth0} from '@/lib/auth0'
+import {apiFetch} from '@/lib/api'
+import {notFound} from 'next/navigation'
+import type {Venue} from '@/types'
+
+interface Props {
+  params: Promise<{id: string}>
+}
+
+export default async function VenuePage({params}: Props) {
+  const {id} = await params
+  const session = await auth0.getSession()
+  
+  // Fetch on server
+  try {
+    const venue = await apiFetch<Venue>(`/api/venues/${id}`)
+    return <VenueDetail venue={venue} />
+  } catch (error) {
+    notFound()
+  }
+}
+
+// Generate metadata
+export async function generateMetadata({params}: Props) {
+  const {id} = await params
+  const venue = await apiFetch<Venue>(`/api/venues/${id}`)
+  return {
+    title: `${venue.name} - SportsHub`,
+    description: venue.description
+  }
+}
+```
+
+### Client Component Fetching
+
+```tsx components/match/match-search-client.tsx
+'use client'
+
+import {useState, useEffect} from 'react'
+import {apiFetchClient} from '@/lib/api'
+import {useToast} from '@/hooks/use-toast'
+import type {Match} from '@/types'
+
+export function MatchSearchClient() {
+  const [matches, setMatches] = useState<Match[]>([])
+  const [loading, setLoading] = useState(true)
+  const {toast} = useToast()
+  
+  useEffect(() => {
+    async function loadMatches() {
+      try {
+        const data = await apiFetchClient<Match[]>('/api/matches')
+        setMatches(data)
+      } catch (error) {
+        toast({
+          title: 'Error loading matches',
+          description: error.message,
+          variant: 'destructive'
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadMatches()
+  }, [])
+  
+  if (loading) return <Spinner />
+  return <MatchList matches={matches} />
+}
+```
+
+## Navigation
+
+### Link Component
+
+```tsx
+import Link from 'next/link'
+import {Button} from '@/components/ui/button'
+
+// Basic link
+<Link href="/dashboard">Dashboard</Link>
+
+// With button
+<Button asChild>
+  <Link href="/match/create">Create Match</Link>
+</Button>
+
+// Dynamic route
+<Link href={`/venue/${venue.id}`}>{venue.name}</Link>
+
+// With query params
+<Link href={{pathname: '/match/search', query: {city: 'Madrid'}}}>
+  Madrid Matches
+</Link>
+```
+
+### Programmatic Navigation
+
+```tsx
+'use client'
+
+import {useRouter} from 'next/navigation'
+import {Button} from '@/components/ui/button'
+
+export function BookingButton({resourceId}: {resourceId: string}) {
+  const router = useRouter()
+  
+  async function handleBooking() {
+    await apiFetchClient('/api/bookings', {
+      method: 'POST',
+      body: JSON.stringify({resourceId})
+    })
+    
+    // Navigate after booking
+    router.push('/dashboard/bookings')
+    
+    // Or refresh current page data
+    router.refresh()
+  }
+  
+  return <Button onClick={handleBooking}>Book Now</Button>
+}
+```
+
+### Redirect
+
+```typescript
+import {redirect} from 'next/navigation'
+
+// Server component redirect
+export default async function Page() {
+  const session = await auth0.getSession()
+  if (!session) redirect('/login')
+  
+  // Render page
+}
+
+// Permanent redirect (308)
+redirect('/new-path', 'replace')
+```
+
+## Loading States
+
+### Loading UI
+
+Create `loading.tsx` for automatic loading states:
+
+```tsx app/match/loading.tsx
+import {Skeleton} from '@/components/ui/skeleton'
+
+export default function Loading() {
+  return (
+    <div className="container mx-auto p-6">
+      <Skeleton className="h-12 w-64 mb-6" />
+      <div className="grid gap-4">
+        {[...Array(5)].map((_, i) => (
+          <Skeleton key={i} className="h-32 w-full" />
+        ))}
+      </div>
+    </div>
+  )
+}
+```
+
+### Error Handling
+
+Create `error.tsx` for error boundaries:
+
+```tsx app/match/error.tsx
+'use client'
+
+import {useEffect} from 'react'
+import {Button} from '@/components/ui/button'
+import {Alert, AlertTitle, AlertDescription} from '@/components/ui/alert'
+
+export default function Error({
+  error,
+  reset
+}: {
+  error: Error & {digest?: string}
+  reset: () => void
+}) {
+  useEffect(() => {
+    console.error(error)
+  }, [error])
+  
+  return (
+    <div className="container mx-auto p-6">
+      <Alert variant="destructive">
+        <AlertTitle>Something went wrong</AlertTitle>
+        <AlertDescription>{error.message}</AlertDescription>
+      </Alert>
+      <Button onClick={reset} className="mt-4">Try again</Button>
+    </div>
+  )
+}
+```
+
+## Authentication Flow
+
+### Login/Logout
+
+```tsx components/auth-button.tsx
+'use client'
+
+import {Button} from '@/components/ui/button'
+
+export function LoginButton() {
+  return (
+    <Button onClick={() => window.location.href = '/api/auth/login'}>
+      Sign In
+    </Button>
+  )
+}
+
+export function LogoutButton() {
+  return (
+    <Button 
+      variant="ghost"
+      onClick={() => window.location.href = '/api/auth/logout'}
+    >
+      Sign Out
+    </Button>
+  )
+}
+```
+
+### Onboarding Flow
+
+```typescript
+// After first login, redirect to onboarding
+if (session && !user.hasCompletedOnboarding) {
+  redirect('/onboarding')
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Server Components First" icon="server">
+    Use Server Components for data fetching and authentication checks
+  </Card>
+  <Card title="Layout Protection" icon="shield">
+    Protect entire route sections with layout authentication
+  </Card>
+  <Card title="Type Safety" icon="code">
+    Define TypeScript interfaces for all API responses
+  </Card>
+  <Card title="Error Handling" icon="triangle-exclamation">
+    Implement error.tsx and loading.tsx for better UX
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Frontend Structure" icon="folder-tree" href="./structure">
+    Learn about the Next.js app structure and directory organization
+  </Card>
+  <Card title="Components" icon="puzzle-piece" href="./components">
+    Explore component patterns and shadcn/ui usage
+  </Card>
+</CardGroup>

@@ -1,0 +1,493 @@
+---
+title: Match System
+description: Find opponents, organize matches, and play together in Hub
+---
+
+## Overview
+
+The Hub matching system connects players who want to find opponents for padel matches. Instead of booking a court alone, you can create a match request, split the cost, and fill open spots with nearby players.
+
+## How Matching Works
+
+### Match Flow Overview
+
+<Steps>
+  <Step title="Create Match Request">
+    Select a court, date, and time, then configure your match preferences
+  </Step>
+  <Step title="Pay Your Share">
+    As the organizer, pay your portion of the court cost upfront
+  </Step>
+  <Step title="Players Discover">
+    Nearby players receive notifications and can search for open matches
+  </Step>
+  <Step title="Players Join">
+    Interested players join your match and pay their share
+  </Step>
+  <Step title="Match Confirms">
+    When all spots are filled, the court booking is confirmed
+  </Step>
+  <Step title="Play Together">
+    Everyone shows up at the venue and plays!
+  </Step>
+</Steps>
+
+## Creating a Match
+
+### Prerequisites
+
+<CardGroup cols={2}>
+  <Card title="48-Hour Minimum" icon="clock">
+    Matches must be created at least 48 hours in advance
+  </Card>
+  <Card title="Available Court" icon="calendar-check">
+    Select an available time slot at any venue
+  </Card>
+  <Card title="Payment Method" icon="credit-card">
+    Have a payment method ready for your portion
+  </Card>
+  <Card title="Location Set" icon="map-pin">
+    Select search location to find nearby players
+  </Card>
+</CardGroup>
+
+### Match Creation Flow
+
+<Steps>
+  <Step title="Find a Court">
+    Browse venues and select a specific court resource. Click "Ver disponibilidad" to see available slots.
+  </Step>
+  <Step title="Choose Slot">
+    Pick a date and time slot. Click "Crear Partido" to start the match creation process.
+  </Step>
+  <Step title="Configure Match">
+    Set your match preferences:
+    - **Format**: 1v1 or 2v2
+    - **Skill Level**: Beginner, Intermediate, Advanced, or Any
+    - **Search City**: Where to look for players
+    - **Search Radius**: How far to search (1-50 km)
+    - **Custom Message**: Optional invitation message
+  </Step>
+  <Step title="Review & Pay">
+    Review the match details and pay your share. For a 2v2 match, you pay 1/4 of the total court cost.
+  </Step>
+  <Step title="Match Opens">
+    After payment, your match becomes visible to eligible players in your search area.
+  </Step>
+</Steps>
+
+<Warning>
+  You must complete payment within **30 minutes** or the match request and court booking will be automatically cancelled.
+</Warning>
+
+## Match Formats
+
+Hub supports two match formats:
+
+### 1v1 (Singles)
+
+- **Total Players**: 2
+- **Cost Split**: Each player pays 50%
+- **Team Assignment**: No teams (one-on-one)
+- **Use Case**: Practice, competitive play, or casual singles
+
+### 2v2 (Doubles)
+
+- **Total Players**: 4
+- **Cost Split**: Each player pays 25%
+- **Team Assignment**: Team A vs Team B
+- **Use Case**: Social play, tournaments, team practice
+
+## Skill Levels
+
+Set skill requirements to match with players at your level:
+
+<Accordion title="ANY - Open to Everyone">
+  **Best for**: 
+  - Mixed-level social play
+  - Beginners looking to learn from better players
+  - Casual matches focused on fun
+  
+  **Who can join**: Any player regardless of experience
+</Accordion>
+
+<Accordion title="BEGINNER - New Players">
+  **Best for**:
+  - Players learning the basics
+  - First few months of playing
+  - Focus on fundamentals
+  
+  **Who can join**: Players who identify as beginners
+</Accordion>
+
+<Accordion title="INTERMEDIATE - Regular Players">
+  **Best for**:
+  - Players with 6+ months experience
+  - Solid understanding of rules and strategy
+  - Competitive but friendly play
+  
+  **Who can join**: Players comfortable with game flow
+</Accordion>
+
+<Accordion title="ADVANCED - Experienced Players">
+  **Best for**:
+  - Competitive matches
+  - Tournament preparation
+  - Skilled players seeking challenge
+  
+  **Who can join**: Experienced players with strong technique
+</Accordion>
+
+## Searching for Matches
+
+### Using Match Search
+
+<Steps>
+  <Step title="Access Match Search">
+    Navigate to the match search page from the main menu
+  </Step>
+  <Step title="Set Your Location">
+    Select your city and adjust the search radius (1-50 km)
+  </Step>
+  <Step title="Configure Filters">
+    Set your preferences:
+    - Date and time range
+    - Match duration (60, 90, 120 min, or any)
+    - Format (1v1 or 2v2)
+    - Skill level
+  </Step>
+  <Step title="Search">
+    Click "Buscar partidos" to see available matches
+  </Step>
+  <Step title="Review Results">
+    Browse matches grouped by venue, sorted by distance
+  </Step>
+</Steps>
+
+### Understanding Search Results
+
+Results show:
+
+- **Venue Information**: Name, city, distance from you
+- **Available Slots**: Number of open matches at each venue
+- **Match Details**: Date, time, format, skill level, spots available
+- **Cost Per Player**: Your share of the court cost
+- **Eligible Players**: How many players in the area match the criteria
+- **Interactive Map**: Visual representation of venue locations
+
+<Tip>
+  The map shows venue markers with match counts. Click markers to filter results to that specific venue.
+</Tip>
+
+## Joining a Match
+
+### Join Process
+
+<Steps>
+  <Step title="Find a Match">
+    Use match search to find matches that fit your criteria
+  </Step>
+  <Step title="Select Team">
+    For 2v2 matches, choose Team A or Team B (teams must be balanced)
+  </Step>
+  <Step title="Review Cost">
+    Check the per-player cost before joining
+  </Step>
+  <Step title="Join & Pay">
+    Click "Join Match" and complete payment for your share
+  </Step>
+  <Step title="Confirmation">
+    Receive confirmation and match details
+  </Step>
+</Steps>
+
+### Join Restrictions
+
+<Warning>
+  You cannot join a match if:
+  - You're already in this match
+  - Your selected team is full
+  - The match has expired
+  - The match is cancelled
+  - You haven't completed payment
+</Warning>
+
+## Match Status
+
+Understand what each status means:
+
+### Active Statuses
+
+<Accordion title="AWAITING_ORGANIZER_PAYMENT">
+  **What it means**: Match created but organizer hasn't paid yet
+  
+  **Timeline**: 30 minutes to pay
+  
+  **Visible to others**: No - not searchable until organizer pays
+  
+  **Next steps**: Organizer must complete payment to open the match
+</Accordion>
+
+<Accordion title="OPEN">
+  **What it means**: Match is accepting players
+  
+  **Timeline**: Closes 24 hours before match time
+  
+  **Visible to others**: Yes - appears in search results
+  
+  **Next steps**: Waiting for players to join and fill remaining spots
+</Accordion>
+
+<Accordion title="FULL">
+  **What it means**: All player spots are filled
+  
+  **Timeline**: Match is ready to go
+  
+  **Visible to others**: No longer in search results
+  
+  **Next steps**: Players show up at scheduled time
+</Accordion>
+
+### Final Statuses
+
+<Accordion title="CANCELLED">
+  **Why it happens**:
+  - Organizer didn't pay within 30 minutes
+  - Organizer cancelled before match filled
+  - Not enough players joined
+  
+  **Outcome**: Court booking cancelled, all payments refunded
+</Accordion>
+
+<Accordion title="EXPIRED">
+  **Why it happens**: Match reached 24 hours before start time without filling
+  
+  **Outcome**: Automatically cancelled, court released, payments refunded
+</Accordion>
+
+## Managing Your Matches
+
+### View Your Matches
+
+Access your matches from the navigation menu:
+
+- **My Matches**: See all matches you've organized or joined
+- **Match Invitations**: View pending invitations
+- **Match Details**: Click any match for full information
+
+### Match Details Page
+
+For each match, view:
+
+<CardGroup cols={2}>
+  <Card title="Match Info" icon="info-circle">
+    Format, skill level, date, time, duration
+  </Card>
+  <Card title="Venue Details" icon="map-marker-alt">
+    Venue name, court name, address, map
+  </Card>
+  <Card title="Player List" icon="users">
+    All confirmed players with team assignments
+  </Card>
+  <Card title="Cost Breakdown" icon="euro-sign">
+    Your share and payment status
+  </Card>
+</CardGroup>
+
+### Invitation System
+
+Share your match with friends:
+
+1. **Generate Link**: Each match has a unique invitation token
+2. **Share URL**: Send the match link to specific players
+3. **Direct Join**: Recipients can join directly without searching
+4. **Token Security**: Tokens are unique and tied to specific matches
+
+<Note>
+  Invitation links work for both registered users and new players. New players must create an account to join.
+</Note>
+
+## Player Actions
+
+### As an Organizer
+
+What you can do:
+
+- **Cancel Match**: Cancel before it fills (full matches can't be cancelled)
+- **Share Invitation**: Send the invitation link to specific players
+- **Monitor Status**: Track how many spots are filled
+- **Contact Players**: See who has joined
+- **Check In**: Mark your arrival at the venue
+
+### As a Participant
+
+ What you can do:
+
+- **View Match Details**: See all match information
+- **Report Absence**: Cancel your spot if you can't make it
+- **Check In**: Confirm your arrival at the venue
+- **Leave Feedback**: Rate the match experience (coming soon)
+
+## Payment Splitting
+
+### How Costs Are Divided
+
+**2v2 Match Example**:
+- Court cost: €40
+- Number of players: 4
+- Cost per player: €10
+
+**1v1 Match Example**:
+- Court cost: €40
+- Number of players: 2
+- Cost per player: €20
+
+### Payment Timing
+
+<Steps>
+  <Step title="Organizer Pays First">
+    Pays their share when creating the match
+  </Step>
+  <Step title="Players Pay to Join">
+    Each joining player pays their share immediately
+  </Step>
+  <Step title="Court Confirms">
+    When all shares are paid, the court booking confirms
+  </Step>
+  <Step title="Refunds if Needed">
+    If match cancels, all players receive automatic refunds
+  </Step>
+</Steps>
+
+## Geographic Search
+
+### How Location Works
+
+ The matching system uses geographic coordinates to:
+
+1. **Find Nearby Matches**: Calculate distance from your search center
+2. **Notify Players**: Alert players within the search radius
+3. **Sort Results**: Show closest venues first
+4. **Display on Map**: Visualize venue locations and distances
+
+### Optimizing Your Search
+
+<CardGroup cols={2}>
+  <Card title="Wider Radius" icon="circle">
+    Increase radius (20-50 km) in less populated areas
+  </Card>
+  <Card title="Tighter Radius" icon="dot-circle">
+    Decrease radius (5-10 km) in cities for convenient locations
+  </Card>
+  <Card title="City Selection" icon="city">
+    Choose your actual location for accurate results
+  </Card>
+  <Card title="Time Flexibility" icon="clock">
+    Wider time ranges show more available matches
+  </Card>
+</CardGroup>
+
+## Player Notifications
+
+When you create a match:
+
+1. **Email Notifications**: Sent to players with notification preferences enabled
+2. **Geographic Filtering**: Only players within your search radius receive alerts
+3. **Preference Matching**: Players who match your skill level criteria
+4. **Immediate Delivery**: Notifications sent as soon as your match opens
+
+<Tip>
+  Writing a friendly custom message increases the chances of players joining your match.
+</Tip>
+
+## Match Etiquette
+
+### Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Arrive Early" icon="clock">
+    Show up 10 minutes before start time
+  </Card>
+  <Card title="Bring Equipment" icon="table-tennis-paddle-ball">
+    Bring your own paddles and balls as backup
+  </Card>
+  <Card title="Communicate" icon="comments">
+    Message other players if running late
+  </Card>
+  <Card title="Be Respectful" icon="handshake">
+    Respect all skill levels and play fairly
+  </Card>
+</CardGroup>
+
+### Handling No-Shows
+
+If a player doesn't show up:
+
+1. **Wait 15 Minutes**: Give them time in case of delays
+2. **Report Absence**: Use the "Report Absence" feature
+3. **Play Anyway**: Continue with fewer players if possible
+4. **Contact Support**: Report repeated no-shows
+
+<Warning>
+  Repeated no-shows without notice may result in account penalties.
+</Warning>
+
+## Advanced Features
+
+### Check-In System
+
+Confirm your attendance:
+- Mark yourself present when you arrive
+- Helps track player reliability
+- Can unlock venue benefits (coming soon)
+
+### Match History
+
+Track your playing activity:
+- See all past matches you've played
+- View player statistics
+- Build your playing reputation
+
+## Troubleshooting
+
+<Accordion title="Why can't I create a match less than 48 hours away?">
+  **Reason**: The 48-hour minimum gives players time to discover, join, and plan to attend your match. Last-minute matches rarely fill.
+  
+  **Solution**: For immediate play, use direct booking instead of creating a match.
+</Accordion>
+
+<Accordion title="My match expired without filling">
+  **Reason**: Not enough players joined before the 24-hour deadline.
+  
+  **Solution**: Try again with:
+  - Wider search radius
+  - More flexible skill level (use "ANY")
+  - Different date/time (evenings and weekends are more popular)
+  - Compelling custom message
+</Accordion>
+
+<Accordion title="I can't join a match - team full error">
+  **Reason**: The team you selected already has the maximum players.
+  
+  **Solution**: Select the other team or find a different match.
+</Accordion>
+
+<Accordion title="Where do I find the match invitation link?">
+  **Location**: On the match detail page, you'll see an invitation token and shareable URL.
+  
+  **How to share**: Copy the URL and send it via WhatsApp, email, or any messaging app.
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Find Venues" icon="map-marked-alt" href="/features/venues">
+    Explore venues to create matches
+  </Card>
+  <Card title="Book Directly" icon="calendar-check" href="/features/bookings">
+    Learn about direct court bookings
+  </Card>
+  <Card title="Payment Info" icon="credit-card" href="/features/payments">
+    Understand payment splitting and refunds
+  </Card>
+</CardGroup>

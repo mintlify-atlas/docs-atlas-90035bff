@@ -1,0 +1,899 @@
+---
+title: Domain Model
+description: Core domain entities, aggregates, and value objects in the Hub platform
+---
+
+The Hub platform uses **Domain-Driven Design (DDD)** principles to model the business domain. This page documents the domain model, including aggregates, entities, value objects, and their relationships.
+
+## Domain-Driven Design Concepts
+
+<CardGroup cols={3}>
+  <Card title="Aggregates" icon="layer-group">
+    Clusters of domain objects treated as a single unit (e.g., Booking, Venue)
+  </Card>
+  <Card title="Entities" icon="fingerprint">
+    Objects with unique identity that persists over time
+  </Card>
+  <Card title="Value Objects" icon="cube">
+    Immutable objects defined by their attributes (e.g., Address, Money)
+  </Card>
+</CardGroup>
+
+<Note>
+  All domain entities are located in `modules/*/domain/` directories
+</Note>
+
+## Booking Domain
+
+### Booking Aggregate
+
+The `Booking` aggregate manages the complete lifecycle of a court booking.
+
+<Accordion title="Booking Entity Structure">
+
+**Location**: `modules/booking/domain/Booking.java`
+
+**Attributes**:
+
+```java
+public class Booking {
+    private final BookingId id;                // Unique identifier
+    private final ResourceId resourceId;       // Court being booked
+    private final UserId playerId;            // Player making booking
+    private final LocalDate bookingDate;      // Date of booking
+    private final SlotRange slot;             // Time slot (start/end)
+    private final BigDecimal pricePaid;       // Amount paid
+    private final String currency;            // Currency code (EUR)
+    private BookingStatus status;             // Booking lifecycle state
+    private PaymentStatus paymentStatus;      // Payment state
+    private Instant cancelledAt;              // Cancellation timestamp
+    private String cancelReason;              // Reason for cancellation
+    private final Instant createdAt;          // Creation timestamp
+    private Instant updatedAt;                // Last update timestamp
+    private Instant expiresAt;                // Payment hold expiration
+}
+```
+
+**Factory Methods**:
+
+```java
+// Regular player booking
+Booking.create(
+    resourceId, playerId, bookingDate, slot, 
+    pricePaid, currency, holdDuration, clock
+)
+
+// Match organizer booking (different lifecycle)
+Booking.createForMatch(
+    resourceId, organizerId, bookingDate, slot,
+    price, currency, expiresAt, clock
+)
+
+// Reconstitution from persistence
+Booking.reconstitute(...) // All fields from database
+```
+
+**Domain Methods**:
+
+- `confirmPayment(clock)` - Mark payment as complete, activate booking
+- `expireHold(clock)` - Cancel booking if payment not received
+- `cancel(reason, clock)` - User cancellation (24h rule enforced)
+- `adminCancel(reason, clock)` - Admin override cancellation
+- `confirmMatch(clock)` - Confirm match booking when full
+- `revertToPendingMatch(clock)` - Revert to pending if player leaves
+- `cancelMatch(clock)` - Cancel match booking
+
+**Business Invariants**:
+- Payment must be confirmed before booking activation
+- Cancellations within 24h of start time are not allowed (user)
+- Admin cancellations bypass time restrictions
+- Match bookings follow different state transitions
+
+</Accordion>
+
+### Payment Entity
+
+<Accordion title="Payment Entity Structure">
+
+**Location**: `modules/booking/domain/Payment.java`
+
+**Purpose**: Tracks payment transactions linked to bookings
+
+**Key Attributes**:
+- Payment intent ID (Stripe integration)
+- Amount and currency
+- Payment status tracking
+- Link to booking and player
+
+</Accordion>
+
+### Booking Value Objects
+
+<CodeGroup>
+
+```java BookingId
+public record BookingId(UUID value) {
+    public static BookingId generate() {
+        return new BookingId(UUID.randomUUID());
+    }
+    
+    public static BookingId from(String value) {
+        return new BookingId(UUID.fromString(value));
+    }
+}
+```
+
+```java BookingStatus
+public enum BookingStatus {
+    PENDING_PAYMENT,  // Awaiting payment
+    CONFIRMED,        // Active booking
+    CANCELLED,        // Cancelled booking
+    PENDING_MATCH     // Match booking awaiting full roster
+}
+```
+
+```java PaymentStatus
+public enum PaymentStatus {
+    PENDING,   // Payment initiated
+    PAID,      // Payment successful
+    FAILED,    // Payment failed
+    REFUNDED   // Payment refunded
+}
+```
+
+</CodeGroup>
+
+## Venue Domain
+
+### Venue Aggregate
+
+<Accordion title="Venue Entity Structure">
+
+**Location**: `modules/venue/domain/Venue.java`
+
+**Attributes**:
+
+```java
+public class Venue {
+    private final VenueId id;
+    private final UserId ownerId;             // Venue owner
+    private VenueName name;
+    private String description;
+    private Address address;                  // Value object
+    private Coordinates coordinates;          // For geo search
+    private final List<VenueImage> images;   // Venue photos
+    private VenueStatus status;              // Approval state
+    private String rejectReason;             // Admin feedback
+    private final Instant createdAt;
+    private Instant updatedAt;
+}
+```
+
+**Factory Methods**:
+
+```java
+Venue.create(ownerId, name, description, address, coordinates, clock)
+Venue.reconstitute(...) // From database
+```
+
+**Domain Methods**:
+
+- `update(...)` - Modify venue details (triggers re-review if active)
+- `suspend(clock)` - Owner-initiated suspension
+- `reactivate(clock)` - Resume after suspension
+- `addImage(imageUrl, clock)` - Add venue photo
+- `removeImage(imageId, clock)` - Delete photo
+- `approve(clock)` - Admin approval
+- `reject(reason, clock)` - Admin rejection
+- `adminSuspend(reason, clock)` - Admin suspension
+
+**Business Invariants**:
+- Only owner can modify venue
+- Updates to active venues trigger PENDING_REVIEW status
+- At least one image recommended (not enforced)
+- Coordinates required for geographic search
+
+</Accordion>
+
+### VenueImage Entity
+
+**Purpose**: Manages venue photos with display ordering
+
+**Attributes**:
+- Image URL and public ID (Cloudinary)
+- Display order (integer)
+- Creation timestamp
+
+### Venue Value Objects
+
+<CodeGroup>
+
+```java VenueId
+public record VenueId(UUID value) {
+    public static VenueId generate() {
+        return new VenueId(UUID.randomUUID());
+    }
+}
+```
+
+```java VenueName
+public record VenueName(String value) {
+    public VenueName {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Venue name required");
+        }
+        if (value.length() > 150) {
+            throw new IllegalArgumentException("Name too long");
+        }
+        value = value.trim();
+    }
+}
+```
+
+```java Address
+public record Address(
+    String street, 
+    String city, 
+    String country, 
+    String postalCode
+) {
+    public Address {
+        if (street == null || street.isBlank()) 
+            throw new IllegalArgumentException("Street required");
+        if (city == null || city.isBlank()) 
+            throw new IllegalArgumentException("City required");
+        if (country == null || country.isBlank())
+            throw new IllegalArgumentException("Country required");
+        street = street.trim();
+        city = city.trim();
+        country = country.trim();
+    }
+}
+```
+
+```java Coordinates
+public record Coordinates(double latitude, double longitude) {
+    public Coordinates {
+        if (latitude < -90 || latitude > 90)
+            throw new IllegalArgumentException("Invalid latitude");
+        if (longitude < -180 || longitude > 180)
+            throw new IllegalArgumentException("Invalid longitude");
+    }
+}
+```
+
+```java VenueStatus
+public enum VenueStatus {
+    PENDING_REVIEW,  // Awaiting admin approval
+    ACTIVE,          // Publicly visible
+    REJECTED,        // Admin rejected
+    SUSPENDED        // Temporarily disabled
+}
+```
+
+</CodeGroup>
+
+## Resource Domain
+
+### Resource Aggregate
+
+<Accordion title="Resource Entity Structure">
+
+**Location**: `modules/resource/domain/Resource.java`
+
+**Attributes**:
+
+```java
+public class Resource {
+    private final ResourceId id;
+    private final VenueId venueId;                      // Parent venue
+    private ResourceName name;
+    private String description;
+    private ResourceType type;                          // Court type
+    private SlotDuration slotDuration;                 // Booking increment
+    private final Map<DayOfWeek, DaySchedule> schedules; // Operating hours
+    private final List<PriceRule> priceRules;          // Dynamic pricing
+    private final List<ResourceImage> images;          // Court photos
+    private ResourceStatus status;
+    private String rejectReason;
+    private final Instant createdAt;
+    private Instant updatedAt;
+}
+```
+
+**Factory Methods**:
+
+```java
+Resource.create(venueId, name, description, type, slotDuration, clock)
+Resource.reconstitute(...) // From database
+```
+
+**Domain Methods**:
+
+- `update(...)` - Modify resource details
+- `setSchedule(day, opening, closing, clock)` - Set hours for day
+- `removeSchedule(day, clock)` - Remove day availability
+- `addPriceRule(...)` - Add pricing rule
+- `removePriceRule(id, clock)` - Delete pricing rule
+- `addImage(imageUrl, clock)` - Add photo
+- `removeImage(imageId, clock)` - Delete photo
+- `suspend/reactivate(clock)` - Owner suspension
+- `approve/reject/adminSuspend(...)` - Admin actions
+- `generateSlotsForDay(day)` - Generate bookable slots
+- `getPriceForSlot(day, time)` - Calculate slot price
+- `isAvailableOn(day)` - Check day availability
+
+**Business Invariants**:
+- Resource belongs to exactly one venue
+- Schedules define operating hours per day of week
+- Price rules evaluated in order (most specific wins)
+- Slot duration divides evenly into schedule
+
+</Accordion>
+
+### DaySchedule Entity
+
+**Purpose**: Operating hours for a specific day of week
+
+**Attributes**:
+- Day of week
+- Opening time
+- Closing time
+
+**Methods**:
+- `generateSlots(slotDuration)` - Create bookable time slots
+
+### Resource Value Objects
+
+<CodeGroup>
+
+```java ResourceType
+public enum ResourceType {
+    PADEL_COURT,
+    TENNIS_COURT,
+    SQUASH_COURT,
+    BADMINTON_COURT,
+    MULTI_SPORT_COURT
+}
+```
+
+```java SlotDuration
+public record SlotDuration(int minutes) {
+    public SlotDuration {
+        if (minutes <= 0 || minutes > 240) {
+            throw new IllegalArgumentException(
+                "Slot duration must be 1-240 minutes"
+            );
+        }
+    }
+}
+```
+
+```java SlotRange
+public record SlotRange(LocalTime startTime, LocalTime endTime) {
+    public SlotRange {
+        if (startTime == null || endTime == null) {
+            throw new IllegalArgumentException("Times required");
+        }
+        if (!endTime.isAfter(startTime)) {
+            throw new IllegalArgumentException(
+                "End time must be after start time"
+            );
+        }
+    }
+    
+    public int durationMinutes() {
+        return (int) Duration.between(startTime, endTime).toMinutes();
+    }
+}
+```
+
+```java PriceRule
+public class PriceRule {
+    private final UUID id;
+    private final DayType dayType;      // WEEKDAY, WEEKEND, or specific day
+    private final LocalTime startTime;
+    private final LocalTime endTime;
+    private final BigDecimal price;
+    private final String currency;
+    
+    public boolean appliesTo(DayOfWeek day, LocalTime time) {
+        // Check if rule matches day and time
+    }
+}
+```
+
+```java DayType
+public enum DayType {
+    WEEKDAY,    // Mon-Fri
+    WEEKEND,    // Sat-Sun
+    MONDAY,     // Specific days for granular pricing
+    TUESDAY,
+    WEDNESDAY,
+    THURSDAY,
+    FRIDAY,
+    SATURDAY,
+    SUNDAY
+}
+```
+
+```java ResourceStatus
+public enum ResourceStatus {
+    PENDING_REVIEW,
+    ACTIVE,
+    REJECTED,
+    SUSPENDED
+}
+```
+
+</CodeGroup>
+
+## Matching Domain
+
+### MatchRequest Aggregate
+
+<Accordion title="MatchRequest Entity Structure">
+
+**Location**: `modules/matching/domain/MatchRequest.java`
+
+**Attributes**:
+
+```java
+public class MatchRequest {
+    private final MatchRequestId id;
+    private final UserId organizerId;              // Match creator
+    private final ResourceId resourceId;           // Court booked
+    private final LocalDate bookingDate;
+    private final LocalTime startTime;
+    private final int slotDurationMinutes;
+    private final MatchFormat format;              // Singles/Doubles
+    private final MatchSkillLevel skillLevel;     // Skill requirement
+    private final String customMessage;            // Organizer message
+    private final InvitationToken invitationToken; // Public join link
+    private final GeoPoint searchCenter;          // Search location
+    private final double searchRadiusKm;          // Search radius
+    private final BigDecimal pricePerPlayer;      // Cost per player
+    private final Instant expiresAt;              // Auto-close time
+    private final Instant createdAt;
+    
+    private MatchStatus status;
+    private final List<MatchPlayer> players;      // Participants
+}
+```
+
+**Factory Method**:
+
+```java
+MatchRequest.create(
+    organizerId, resourceId, bookingDate, startTime,
+    slotDurationMinutes, format, skillLevel, customMessage,
+    searchCenter, searchRadiusKm, pricePerPlayer, clock
+)
+```
+
+**Domain Methods**:
+
+- `openForPlayers()` - Open after organizer payment
+- `cancelDueToPaymentTimeout()` - Cancel if organizer doesn't pay
+- `join(playerId, team, clock)` - Player joins match
+- `cancel()` - Organizer cancellation
+- `removePlayer(playerId)` - Remove player
+- `checkIn(playerId, clock)` - Mark player present
+- `reportAbsence(playerId)` - Report no-show
+- `expire()` - Auto-close after expiration time
+- `availableSlots()` - Calculate remaining spots
+
+**Business Invariants**:
+- Organizer must pay before match opens
+- Player count cannot exceed format max
+- Teams must be balanced (doubles)
+- Match expires 24h before start time
+- Players cannot join if already in match
+
+</Accordion>
+
+### MatchPlayer Entity
+
+**Purpose**: Represents a player's participation in a match
+
+**Attributes**:
+- Player ID
+- Team assignment (A or B)
+- Role (ORGANIZER or GUEST)
+- Joined timestamp
+- Check-in status
+- Absence reporting
+
+### MatchInvitation Entity
+
+**Purpose**: Tracks invitations sent to eligible players
+
+**Attributes**:
+- Match request ID
+- Player ID and email
+- Invitation status (PENDING, ACCEPTED, DECLINED)
+- Sent and responded timestamps
+- Free substitute flag
+
+### Matching Value Objects
+
+<CodeGroup>
+
+```java MatchFormat
+public enum MatchFormat {
+    SINGLES(2, 1),    // 2 players, 1 per team
+    DOUBLES(4, 2);    // 4 players, 2 per team
+    
+    private final int maxPlayers;
+    private final int playersPerTeam;
+    
+    public int getMaxPlayers() { return maxPlayers; }
+    public int getPlayersPerTeam() { return playersPerTeam; }
+}
+```
+
+```java MatchSkillLevel
+public enum MatchSkillLevel {
+    BEGINNER,
+    INTERMEDIATE,
+    ADVANCED,
+    MIXED  // Any skill level
+}
+```
+
+```java MatchStatus
+public enum MatchStatus {
+    AWAITING_ORGANIZER_PAYMENT,  // Initial state
+    OPEN,                        // Accepting players
+    FULL,                        // All spots filled
+    CANCELLED,                   // Cancelled by organizer
+    EXPIRED                      // Auto-closed
+}
+```
+
+```java PlayerTeam
+public enum PlayerTeam {
+    TEAM_A,
+    TEAM_B
+}
+```
+
+```java PlayerRole
+public enum PlayerRole {
+    ORGANIZER,  // Match creator
+    GUEST       // Invited/joined player
+}
+```
+
+```java GeoPoint
+public record GeoPoint(double latitude, double longitude) {
+    public GeoPoint {
+        if (latitude < -90 || latitude > 90)
+            throw new IllegalArgumentException("Invalid latitude");
+        if (longitude < -180 || longitude > 180)
+            throw new IllegalArgumentException("Invalid longitude");
+    }
+}
+```
+
+```java InvitationToken
+public record InvitationToken(UUID value) {
+    public static InvitationToken generate() {
+        return new InvitationToken(UUID.randomUUID());
+    }
+}
+```
+
+</CodeGroup>
+
+## IAM Domain
+
+### UserProfile Aggregate
+
+<Accordion title="UserProfile Entity Structure">
+
+**Location**: `modules/iam/domain/UserProfile.java`
+
+**Attributes**:
+
+```java
+public class UserProfile {
+    private final UserId id;
+    private final Auth0Id auth0Id;              // External auth provider ID
+    private Email email;
+    private boolean emailVerified;
+    private DisplayName displayName;
+    private String description;
+    private PhoneNumber phoneNumber;
+    private ImageUrl avatar;
+    private UserRole role;                      // PLAYER, OWNER, ADMIN
+    private OwnerRequestStatus ownerRequestStatus;
+    private SportPreference preferredSport;
+    private SkillLevel skillLevel;
+    private String city;
+    private CountryCode countryCode;
+    private boolean active;
+    private boolean onboardingCompleted;
+    private int noShowCount;                    // Match reliability
+    private Instant matchBannedUntil;          // Temporary ban
+    private Instant lastMatchCancelledAt;
+    private boolean matchNotificationsEnabled;
+    private final Instant createdAt;
+    private Instant updatedAt;
+    private Instant lastLoginAt;
+}
+```
+
+**Factory Method**:
+
+```java
+UserProfile.create(auth0Id, clock)  // Auto-created on first login
+```
+
+**Domain Methods**:
+
+- `updateProfile(...)` - Edit profile information
+- `updateAvatar(imageUrl, clock)` - Change profile picture
+- `requestOwnerRole(clock)` - Request venue owner access
+- `approveOwnerRequest(clock)` - Admin approval
+- `rejectOwnerRequest(clock)` - Admin rejection
+- `changeRole(newRole, clock)` - Admin role change
+- `toggleActive(clock)` - Admin ban/unban
+- `confirmNoShow(clock)` - Record match absence
+- `isMatchBanned(clock)` - Check if temporarily banned
+- `recordLogin(clock)` - Update last login timestamp
+
+**Business Invariants**:
+- Auth0 ID is unique and immutable
+- Default role is PLAYER
+- Owner role requires admin approval
+- 3 no-shows trigger 30-day ban
+- Onboarding completed when name and city set
+
+</Accordion>
+
+### IAM Value Objects
+
+<CodeGroup>
+
+```java Auth0Id
+public record Auth0Id(String value) {
+    public Auth0Id {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Auth0 ID required");
+        }
+    }
+}
+```
+
+```java Email
+public record Email(String value) {
+    public Email {
+        if (value == null || !value.matches("[^@]+@[^@]+\\.[^@]+")) {
+            throw new IllegalArgumentException("Invalid email");
+        }
+    }
+}
+```
+
+```java DisplayName
+public record DisplayName(String value) {
+    public DisplayName {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Display name required");
+        }
+        if (value.length() > 100) {
+            throw new IllegalArgumentException("Name too long");
+        }
+        value = value.trim();
+    }
+}
+```
+
+```java SkillLevel
+public enum SkillLevel {
+    BEGINNER,
+    INTERMEDIATE,
+    ADVANCED
+}
+```
+
+```java SportPreference
+public enum SportPreference {
+    PADEL,
+    TENNIS,
+    SQUASH,
+    BADMINTON
+}
+```
+
+```java OwnerRequestStatus
+public enum OwnerRequestStatus {
+    NONE,      // No request made
+    PENDING,   // Awaiting approval
+    APPROVED,  // Granted
+    REJECTED   // Denied
+}
+```
+
+</CodeGroup>
+
+## Shared Value Objects
+
+<CodeGroup>
+
+```java UserId
+package com.ccasro.hub.shared.domain.valueobjects;
+
+public record UserId(UUID value) {
+    public static UserId newId() {
+        return new UserId(UUID.randomUUID());
+    }
+    
+    public static UserId from(String value) {
+        return new UserId(UUID.fromString(value));
+    }
+}
+```
+
+```java ImageUrl
+public record ImageUrl(String url, String publicId) {
+    public ImageUrl {
+        if (url == null || url.isBlank()) {
+            throw new IllegalArgumentException("URL required");
+        }
+        if (publicId == null || publicId.isBlank()) {
+            throw new IllegalArgumentException("Public ID required");
+        }
+    }
+}
+```
+
+```java CountryCode
+public record CountryCode(String value) {
+    public CountryCode {
+        if (value == null || value.length() != 2) {
+            throw new IllegalArgumentException(
+                "Country code must be 2-letter ISO code"
+            );
+        }
+        value = value.toUpperCase();
+    }
+}
+```
+
+```java UserRole
+public enum UserRole {
+    PLAYER,   // Default role
+    OWNER,    // Can manage venues
+    ADMIN     // Platform administrator
+}
+```
+
+</CodeGroup>
+
+## Domain Events
+
+Domain events represent important business occurrences:
+
+<Accordion title="Booking Events">
+
+```java
+public record BookingConfirmedEvent(
+    BookingId bookingId,
+    UserId playerId,
+    ResourceId resourceId,
+    LocalDate bookingDate,
+    SlotRange slot,
+    Instant occurredAt
+) {}
+
+public record BookingCancelledEvent(
+    BookingId bookingId,
+    UserId playerId,
+    String reason,
+    Instant occurredAt
+) {}
+
+public record BookingExpiredEvent(
+    BookingId bookingId,
+    Instant occurredAt
+) {}
+```
+
+</Accordion>
+
+<Accordion title="Matching Events">
+
+```java
+public record MatchFullEvent(
+    MatchRequestId matchRequestId,
+    UserId organizerId,
+    List<UserId> playerIds,
+    Instant occurredAt
+) {}
+
+public record MatchInvitationsEvent(
+    MatchRequestId matchRequestId,
+    List<UserId> invitedPlayerIds,
+    Instant occurredAt
+) {}
+```
+
+</Accordion>
+
+## Aggregate Boundaries
+
+<Note>
+  Aggregates are consistency boundaries - changes within an aggregate are atomic.
+</Note>
+
+**Key Aggregates**:
+
+1. **Booking** - Manages booking lifecycle and payment
+2. **Venue** - Groups venue details and images
+3. **Resource** - Groups court, schedules, pricing, and images
+4. **MatchRequest** - Groups match details and players
+5. **UserProfile** - User account and preferences
+
+**Relationships**:
+- Aggregates reference each other by ID only
+- Cross-aggregate operations coordinated by use cases
+- No direct object references between aggregates
+
+## Value Object Patterns
+
+### Immutability
+
+All value objects are immutable (using Java records):
+
+```java
+public record Address(String street, String city, String country, String postalCode) {
+    // Compact constructor validates invariants
+    public Address {
+        if (street == null || street.isBlank()) {
+            throw new IllegalArgumentException("Street required");
+        }
+        // Normalize values
+        street = street.trim();
+        city = city.trim();
+    }
+}
+```
+
+### Self-Validation
+
+Value objects validate themselves on construction:
+
+```java
+public record Email(String value) {
+    public Email {
+        if (value == null || !value.matches(EMAIL_REGEX)) {
+            throw new IllegalArgumentException("Invalid email");
+        }
+    }
+}
+```
+
+### Identity vs Value
+
+**Entities** (identity matters):
+- Booking, Venue, Resource, UserProfile
+- Compared by ID
+- Mutable state
+
+**Value Objects** (value matters):
+- Address, Coordinates, SlotRange
+- Compared by attributes
+- Immutable
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Backend Modules" href="./modules">
+    Module structure and architecture
+  </Card>
+  <Card title="Database Schema" href="./database">
+    Persistence mapping and database structure
+  </Card>
+</CardGroup>

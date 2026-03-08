@@ -1,0 +1,324 @@
+---
+title: 'Frontend Structure'
+description: 'Next.js 16 application architecture and folder organization'
+---
+
+## Overview
+
+The Hub frontend is built with **Next.js 16** using the App Router, **React 19**, and **TypeScript**. The application follows a modular, role-based architecture with separate sections for players, venue owners, and administrators.
+
+## Technology Stack
+
+<CardGroup cols={2}>
+  <Card title="Framework" icon="react">
+    Next.js 16.1.6 with React 19.2.3
+  </Card>
+  <Card title="Language" icon="code">
+    TypeScript 5.9.3
+  </Card>
+  <Card title="Styling" icon="paintbrush">
+    Tailwind CSS 4.2 + shadcn/ui
+  </Card>
+  <Card title="UI Components" icon="window">
+    Radix UI primitives
+  </Card>
+</CardGroup>
+
+## Directory Structure
+
+```
+src/
+├── app/                    # Next.js App Router pages
+│   ├── admin/             # Admin dashboard routes
+│   ├── dashboard/         # Player dashboard routes
+│   ├── owner/             # Venue owner routes
+│   ├── match/             # Match management routes
+│   ├── venue/             # Public venue pages
+│   ├── onboarding/        # User onboarding flow
+│   ├── api/               # API routes
+│   │   └── proxy/         # Backend API proxy
+│   ├── layout.tsx         # Root layout
+│   ├── page.tsx           # Homepage
+│   └── globals.css        # Global styles
+├── components/            # React components
+│   ├── ui/               # shadcn/ui components
+│   ├── admin/            # Admin-specific components
+│   ├── dashboard/        # Dashboard components
+│   ├── owner/            # Owner-specific components
+│   ├── match/            # Match-related components
+│   ├── venue/            # Venue components
+│   └── forms/            # Form components
+├── lib/                  # Utility libraries
+│   ├── auth0.ts         # Auth0 configuration
+│   ├── api.ts           # API client utilities
+│   └── utils.ts         # Helper functions
+├── hooks/                # Custom React hooks
+└── types/                # TypeScript type definitions
+```
+
+## App Router Structure
+
+### Role-Based Routing
+
+The application implements three primary user roles with dedicated route sections:
+
+<Tabs>
+  <Tab title="Player Routes">
+    ```
+    /dashboard              # Player home
+    /dashboard/profile      # User profile
+    /dashboard/settings     # Account settings
+    /dashboard/bookings     # Booking history
+    /match/search          # Find matches
+    /match/create          # Create new match
+    /match/my              # User's matches
+    /match/invitations     # Match invitations
+    /match/join/[token]    # Join match via link
+    /match/[id]            # Match details
+    /venue/[id]            # Venue details
+    /venue/[id]/resource/[resourceId]  # Court booking
+    ```
+  </Tab>
+  <Tab title="Owner Routes">
+    ```
+    /owner/dashboard       # Owner home
+    /owner/venues          # Venue management
+    /owner/resources       # Court management
+    /owner/bookings        # Booking management
+    ```
+  </Tab>
+  <Tab title="Admin Routes">
+    ```
+    /admin/dashboard       # Admin home
+    /admin/users           # User management
+    /admin/venues          # All venues
+    /admin/resources       # All courts
+    /admin/bookings        # All bookings
+    ```
+  </Tab>
+</Tabs>
+
+### Layout Hierarchy
+
+<CodeGroup>
+```tsx app/layout.tsx
+import {ThemeProvider} from '@/components/theme-provider'
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="es" suppressHydrationWarning>
+      <body>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          themes={["dark", "light"]}
+        >
+          {children}
+        </ThemeProvider>
+      </body>
+    </html>
+  )
+}
+```
+
+```tsx app/admin/layout.tsx
+import {AdminSidebar} from "@/components/admin/admin-sidebar"
+import {auth0} from "@/lib/auth0"
+import {redirect} from "next/navigation"
+
+export default async function AdminLayout({ children }) {
+  const session = await auth0.getSession()
+  if (!session) redirect("/")
+  
+  const profile = await apiFetch<UserProfile>("/api/me")
+  if (profile.role !== "ADMIN") redirect("/dashboard")
+  
+  return (
+    <div className="flex min-h-screen bg-background">
+      <AdminSidebar user={profile} />
+      <main className="flex-1 overflow-y-auto">{children}</main>
+    </div>
+  )
+}
+```
+</CodeGroup>
+
+<Note>
+  Layout components are server components by default and handle authentication checks before rendering child routes.
+</Note>
+
+## Server vs Client Components
+
+### Server Components (Default)
+
+Pages are server components that:
+- Fetch data directly from the backend API
+- Check authentication status
+- Pass data to client components
+
+```tsx app/match/search/page.tsx
+import {auth0} from "@/lib/auth0"
+import {apiFetch} from "@/lib/api"
+import {MatchSearchClient} from "@/components/match/match-search-client"
+
+export default async function MatchSearchPage() {
+  const session = await auth0.getSession()
+  if (!session) redirect("/")
+  
+  const user = await apiFetch<UserProfile>("/api/me")
+  return <MatchSearchClient user={user} />
+}
+```
+
+### Client Components
+
+Interactive components marked with `'use client'`:
+- Handle user interactions
+- Manage local state
+- Use React hooks
+- Make client-side API calls
+
+```tsx components/match/match-search-client.tsx
+'use client'
+
+import {useState} from 'react'
+import {apiFetchClient} from '@/lib/api'
+
+export function MatchSearchClient({ user }) {
+  const [matches, setMatches] = useState([])
+  // Interactive logic here...
+}
+```
+
+## API Integration
+
+### Proxy Route Pattern
+
+The application uses an API proxy route to securely forward authenticated requests:
+
+```typescript app/api/proxy/[...path]/route.ts
+// Catches all routes: /api/proxy/*
+// Forwards to backend with Auth0 token
+// Located at: src/app/api/proxy/[...path]/route.ts
+```
+
+<Note>
+  The proxy route automatically adds the Auth0 access token to all backend requests and handles CORS and authentication transparently.
+</Note>
+
+### API Client Functions
+
+<Tabs>
+  <Tab title="Server-Side">
+    ```typescript lib/api.ts
+    import {auth0} from '@/lib/auth0'
+    
+    // Use in Server Components
+    export async function apiFetch<T>(
+      endpoint: string,
+      options?: RequestInit
+    ): Promise<T> {
+      const session = await auth0.getSession()
+      const headers = new Headers(options?.headers)
+      headers.set('Authorization', `Bearer ${session.tokenSet.accessToken}`)
+      
+      const response = await fetch(`${API_URL}${endpoint}`, {
+        ...options,
+        headers
+      })
+      
+      if (!response.ok) throw new ApiError(response.status, message)
+      return response.json()
+    }
+    ```
+  </Tab>
+  <Tab title="Client-Side">
+    ```typescript lib/api.ts
+    // Use in Client Components
+    export async function apiFetchClient<T>(
+      endpoint: string,
+      options?: RequestInit
+    ): Promise<T> {
+      // Routes through /api/proxy which adds auth
+      const response = await fetch(`/api/proxy${endpoint}`, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...options?.headers
+        }
+      })
+      
+      if (!response.ok) throw new ApiError(response.status, error.message)
+      return response.json()
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Path Aliases
+
+Configured in `components.json` and `tsconfig.json`:
+
+```json
+{
+  "@/components": "src/components",
+  "@/lib": "src/lib",
+  "@/hooks": "src/hooks",
+  "@/ui": "src/components/ui",
+  "@/utils": "src/lib/utils"
+}
+```
+
+Usage:
+```typescript
+import {Button} from '@/components/ui/button'
+import {auth0} from '@/lib/auth0'
+import {useToast} from '@/hooks/use-toast'
+```
+
+## Environment Configuration
+
+<Note>
+  Required environment variables are defined in `.env.local`
+</Note>
+
+```bash
+# Auth0
+AUTH0_DOMAIN=your-domain.auth0.com
+AUTH0_CLIENT_ID=...
+AUTH0_CLIENT_SECRET=...
+AUTH0_BASE_URL=http://localhost:3000
+AUTH0_SECRET=...
+AUTH0_AUDIENCE=...
+
+# Backend API
+API_URL=http://localhost:8000
+```
+
+## Static Assets
+
+Public assets are served from the `/public` directory:
+
+```
+public/
+├── icon.svg              # App icon (SVG)
+├── icon-light-32x32.png  # Light theme favicon
+├── icon-dark-32x32.png   # Dark theme favicon
+└── apple-icon.png        # Apple touch icon
+```
+
+Reference in code:
+```tsx
+<Image src="/icon.svg" alt="Logo" />
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Component Organization" icon="puzzle-piece" href="./components">
+    Learn about shadcn/ui components and custom component structure
+  </Card>
+  <Card title="Routing & Auth" icon="route" href="./routing">
+    Deep dive into routing patterns and authentication flow
+  </Card>
+</CardGroup>

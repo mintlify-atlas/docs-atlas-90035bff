@@ -1,0 +1,453 @@
+---
+title: Backend Modules
+description: Overview of the Hub platform's backend architecture and modular structure
+---
+
+The Hub backend is built using **hexagonal architecture** (Ports and Adapters) with clearly separated modules. Each module is organized into domain, application, and infrastructure layers.
+
+## Architecture Overview
+
+The backend follows **Domain-Driven Design (DDD)** principles with hexagonal architecture:
+
+- **Domain Layer**: Contains business logic, entities, value objects, and domain ports
+- **Application Layer**: Orchestrates use cases and defines DTOs/commands
+- **Infrastructure Layer**: Implements adapters for persistence, APIs, and external services
+
+<Note>
+  All modules are located in `backend/src/main/java/com/ccasro/hub/modules/`
+</Note>
+
+## Core Technology Stack
+
+<CardGroup cols={2}>
+  <Card title="Framework" icon="leaf">
+    Spring Boot 3.5.10
+  </Card>
+  <Card title="Language" icon="java">
+    Java 21
+  </Card>
+  <Card title="Database" icon="database">
+    PostgreSQL with PostGIS
+  </Card>
+  <Card title="ORM" icon="layer-group">
+    Spring Data JPA + Hibernate Spatial
+  </Card>
+</CardGroup>
+
+## Module Structure
+
+Each module follows a consistent structure:
+
+```
+module-name/
+├── domain/
+│   ├── Entity.java                    # Aggregate roots
+│   ├── valueobjects/                  # Value objects
+│   ├── events/                        # Domain events
+│   ├── exception/                     # Domain exceptions
+│   └── ports/out/                     # Output ports (repositories, services)
+├── application/
+│   ├── dto/                           # Data transfer objects
+│   └── port/out/                      # Application-specific read ports
+├── usecases/
+│   └── *Service.java                  # Use case implementations
+└── infrastructure/
+    ├── api/                           # REST controllers and DTOs
+    ├── persistence/                   # JPA entities and repositories
+    └── adapters/                      # External service adapters
+```
+
+## Modules
+
+### Booking Module
+
+<Accordion title="Booking Module Details">
+  
+**Purpose**: Manages court bookings and payment processing
+
+**Location**: `modules/booking/`
+
+**Domain Entities**:
+- `Booking` - Core booking aggregate with lifecycle management
+- `Payment` - Payment tracking and status
+
+**Key Value Objects**:
+- `BookingId`, `PaymentId`
+- `BookingStatus` - PENDING_PAYMENT, CONFIRMED, CANCELLED, PENDING_MATCH
+- `PaymentStatus` - PENDING, PAID, FAILED, REFUNDED
+
+**Domain Events**:
+- `BookingConfirmedEvent`
+- `BookingCancelledEvent`
+- `BookingExpiredEvent`
+
+**Use Cases**:
+- `CreateBookingService` - Create new bookings with payment holds
+- `ConfirmBookingPaymentService` - Confirm payment and activate booking
+- `CancelBookingService` - Handle user-initiated cancellations (24h rule)
+- `AdminBookingService` - Admin override for cancellations
+- `ExpirePaymentHoldsJob` - Background job to expire unpaid bookings
+- `GetMyBookingsService` - Retrieve user's bookings
+- `GetOwnerBookingsService` - Retrieve owner's venue bookings
+
+**Key Business Rules**:
+- Bookings must be paid within hold duration (configurable)
+- Cancellations require 24 hours notice for refunds
+- Slot overlap prevention (enforced at database level)
+- Match bookings have different lifecycle (PENDING_MATCH status)
+
+**Output Ports**:
+- `BookingRepositoryPort` - Booking persistence
+- `PaymentRepositoryPort` - Payment persistence
+- `PaymentPort` - External payment provider integration
+- `ResourceValidationPort` - Validate resource availability
+- `BookingNotificationPort` - Send booking notifications
+
+</Accordion>
+
+### Venue Module
+
+<Accordion title="Venue Module Details">
+
+**Purpose**: Manages padel venues owned by venue operators
+
+**Location**: `modules/venue/`
+
+**Domain Entities**:
+- `Venue` - Venue aggregate with location and images
+- `VenueImage` - Venue photos with ordering
+
+**Key Value Objects**:
+- `VenueId`, `VenueName`
+- `Address` - Street, city, country, postal code
+- `Coordinates` - Latitude/longitude for geographic queries
+- `VenueStatus` - PENDING_REVIEW, ACTIVE, REJECTED, SUSPENDED
+
+**Use Cases**:
+- `CreateVenueService` - Register new venue (requires approval)
+- `UpdateVenueService` - Modify venue details
+- `GetVenueService` - Public venue details
+- `GetMyVenuesService` - Owner's venue list
+- `SearchVenuesService` - Geographic and filter-based search
+- `VenueImageService` - Manage venue images
+- Admin approval/rejection workflows
+
+**Key Business Rules**:
+- Venues require admin approval before going public
+- Only owners can modify their venues
+- Updates to active venues trigger re-review
+- Geographic search uses PostGIS
+
+**Output Ports**:
+- `VenueRepositoryPort` - Venue persistence with geo queries
+
+</Accordion>
+
+### Resource Module
+
+<Accordion title="Resource Module Details">
+
+**Purpose**: Manages bookable resources (courts) within venues
+
+**Location**: `modules/resource/`
+
+**Domain Entities**:
+- `Resource` - Court/facility aggregate
+- `DaySchedule` - Operating hours per day of week
+- `ResourceImage` - Resource photos
+
+**Key Value Objects**:
+- `ResourceId`, `ResourceName`
+- `ResourceType` - PADEL_COURT, TENNIS_COURT, etc.
+- `ResourceStatus` - PENDING_REVIEW, ACTIVE, REJECTED, SUSPENDED
+- `SlotDuration` - Booking slot length (e.g., 60, 90 minutes)
+- `SlotRange` - Start and end times for a booking slot
+- `PriceRule` - Dynamic pricing by day type and time range
+- `DayType` - WEEKDAY, WEEKEND, MONDAY, TUESDAY, etc.
+- `DayOfWeek` - Business enum for days
+
+**Use Cases**:
+- `CreateResourceService` - Add new court to venue
+- `UpdateResourceService` - Modify resource details
+- `GetResourceService` - Public resource details
+- `SearchResourcesService` - Find available courts
+- `GetAvailabilityService` - Get available slots for a date
+- `ManageScheduleService` - Set opening/closing hours
+- `ManagePricingService` - Configure dynamic pricing rules
+- Admin approval workflows
+
+**Key Business Rules**:
+- Resources belong to exactly one venue
+- Schedules define availability by day of week
+- Pricing rules support time-based and day-type variations
+- Slot generation based on schedule and duration
+- Resources require admin approval
+
+**Output Ports**:
+- `ResourceRepositoryPort` - Resource persistence
+- `BookedSlotsPort` - Query booked time slots
+- `SlotAvailabilityPort` - Check slot availability
+- `ResourceCountPort` - Statistics queries
+
+</Accordion>
+
+### Matching Module
+
+<Accordion title="Matching Module Details">
+
+**Purpose**: Facilitates finding and organizing matches with other players
+
+**Location**: `modules/matching/`
+
+**Domain Entities**:
+- `MatchRequest` - Match organization aggregate
+- `MatchPlayer` - Player participation in match
+- `MatchInvitation` - Invitation to join match
+
+**Key Value Objects**:
+- `MatchRequestId`, `InvitationToken`
+- `MatchStatus` - AWAITING_ORGANIZER_PAYMENT, OPEN, FULL, CANCELLED, EXPIRED
+- `MatchFormat` - SINGLES, DOUBLES (defines team structure)
+- `MatchSkillLevel` - BEGINNER, INTERMEDIATE, ADVANCED
+- `PlayerRole` - ORGANIZER, GUEST
+- `PlayerTeam` - TEAM_A, TEAM_B
+- `GeoPoint` - Search center coordinates
+- `MatchInvitationStatus` - PENDING, ACCEPTED, DECLINED
+
+**Domain Events**:
+- `MatchFullEvent` - Triggered when match reaches capacity
+- `MatchInvitationsEvent` - Sent to eligible players
+
+**Use Cases**:
+- `CreateMatchRequestService` - Organize new match
+- `JoinMatchService` - Join an open match
+- `LeaveMatchService` - Leave before match starts
+- `CancelMatchService` - Cancel match (organizer only)
+- `InvitePlayersService` - Send invitations to eligible players
+- `RespondToInvitationService` - Accept/decline invitation
+- `CheckInService` - Player check-in at venue
+- `ReportAbsenceService` - Report no-show player
+- `FindEligiblePlayersService` - Geographic and skill-based matching
+- `ExpireMatchRequestsJob` - Auto-expire old matches
+
+**Key Business Rules**:
+- Organizer pays first, then match opens to players
+- Geographic radius search for nearby players
+- Skill level filtering for balanced matches
+- Team assignment (singles: all TEAM_A, doubles: A/B split)
+- Cooldown period between match creations
+- Max active matches per user
+- No-show tracking and banning system
+- Match closes 24 hours before start time
+
+**Exceptions**:
+- `MatchFullException`, `TeamFullException`
+- `PlayerAlreadyJoinedException`
+- `MatchCreationCooldownException`
+- `TooManyActiveMatchesException`
+- `PlayerMatchBannedException`
+- `PlayerTimeConflictException`
+
+**Output Ports**:
+- `MatchRequestRepositoryPort` - Match persistence
+- `MatchInvitationRepositoryPort` - Invitation tracking
+- `EligiblePlayerPort` - Find matching players by criteria
+- `MatchNotificationPort` - Send match notifications
+
+</Accordion>
+
+### IAM Module
+
+<Accordion title="IAM Module (Identity & Access Management) Details">
+
+**Purpose**: User profile management and authentication integration
+
+**Location**: `modules/iam/`
+
+**Domain Entity**:
+- `UserProfile` - User account and preferences
+
+**Key Value Objects**:
+- `Auth0Id` - External identity provider ID
+- `Email`, `DisplayName`, `PhoneNumber`
+- `SkillLevel` - BEGINNER, INTERMEDIATE, ADVANCED
+- `SportPreference` - PADEL, TENNIS, SQUASH, BADMINTON
+- `OwnerRequestStatus` - NONE, PENDING, APPROVED, REJECTED
+
+**Use Cases**:
+- `GetOrCreateUserService` - Sync with Auth0 on login
+- `UpdateProfileService` - Edit profile information
+- `UploadAvatarService` - Change profile picture
+- `RequestOwnerRoleService` - Request venue owner privileges
+- `GetUserStatsService` - Retrieve user statistics
+- Admin user management (approve owner requests, ban users)
+
+**Key Business Rules**:
+- Users auto-created on first Auth0 login
+- Default role: PLAYER
+- Owner role requires admin approval
+- Onboarding completed when display name and city set
+- No-show tracking for match reliability
+- Temporary bans after 3 no-shows (30 days)
+- Match notification preferences
+
+**Output Ports**:
+- `UserProfileRepositoryPort` - User persistence
+- `UserStatsPort` - Aggregated statistics
+
+</Accordion>
+
+### Media Module
+
+<Accordion title="Media Module Details">
+
+**Purpose**: Centralized media upload and management
+
+**Location**: `modules/media/`
+
+**Domain Value Objects**:
+- `UploadContext` - Context information for uploads
+- `UploadPurpose` - VENUE_IMAGE, RESOURCE_IMAGE, USER_AVATAR
+
+**Use Cases**:
+- `UploadImageService` - Upload to cloud storage (Cloudinary)
+- `DeleteImageService` - Remove from cloud storage
+- Image validation and optimization
+
+**Key Features**:
+- Cloudinary integration for CDN delivery
+- Image transformation and optimization
+- Purpose-based upload policies
+- Public ID management for deletion
+
+**Dependencies**:
+- `cloudinary-http5` library
+
+</Accordion>
+
+### Admin Module
+
+<Accordion title="Admin Module Details">
+
+**Purpose**: Administrative operations and dashboard statistics
+
+**Location**: `modules/admin/`
+
+**Use Cases**:
+- `GetAdminStatsService` - Dashboard metrics
+- Admin actions for venue/resource approval
+- User management operations
+
+**Key Features**:
+- Platform-wide statistics aggregation
+- Cross-module administrative operations
+- Approval workflows for content moderation
+
+**Output Ports**:
+- `AdminStatsPort` - Aggregate statistics from all modules
+
+</Accordion>
+
+### Security Module
+
+<Accordion title="Security Module Details">
+
+**Purpose**: Authentication and authorization configuration
+
+**Location**: `modules/security/`
+
+**Key Components**:
+- JWT token validation (Auth0 integration)
+- Spring Security configuration
+- Role-based access control (PLAYER, OWNER, ADMIN)
+- Method-level security annotations
+
+**Authentication Flow**:
+1. Frontend obtains JWT from Auth0
+2. Backend validates JWT signature and claims
+3. User profile loaded/created on first access
+4. Security context populated with user details
+
+**Authorization**:
+- `@PreAuthorize` annotations on endpoints
+- Role hierarchy: ADMIN > OWNER > PLAYER
+- Resource ownership checks in services
+
+</Accordion>
+
+## Cross-Cutting Concerns
+
+### Shared Domain
+
+<Note>
+  Location: `shared/domain/`
+</Note>
+
+Common value objects and utilities used across modules:
+
+- `UserId` - User identifier (UUID)
+- `ImageUrl` - Image URL with public ID
+- `CountryCode` - ISO country codes
+- `UserRole` - PLAYER, OWNER, ADMIN
+- `MoneyUtils` - Currency and decimal handling
+
+### Event-Driven Communication
+
+Modules communicate via:
+- **Domain Events** - Published after successful transactions
+- **Application Events** - Spring's event publishing mechanism
+- **Ports** - Cross-module dependencies via interfaces
+
+### Data Consistency
+
+Strategies used:
+- Database constraints (foreign keys, exclusion constraints)
+- Domain-level validation in aggregates
+- Optimistic locking for concurrent updates
+- Transactional boundaries at use case level
+
+## Ports and Adapters
+
+The hexagonal architecture uses ports and adapters to maintain separation:
+
+<CodeGroup>
+
+```java Domain Port (Interface)
+package com.ccasro.hub.modules.booking.domain.ports.out;
+
+public interface BookingRepositoryPort {
+    Booking save(Booking booking);
+    Optional<Booking> findById(BookingId id);
+    List<Booking> findByPlayerIdAndDateRange(UserId playerId, LocalDate from, LocalDate to);
+}
+```
+
+```java Infrastructure Adapter (Implementation)
+package com.ccasro.hub.modules.booking.infrastructure.persistence;
+
+@Component
+public class BookingRepositoryAdapter implements BookingRepositoryPort {
+    private final BookingJpaRepository jpaRepository;
+    
+    @Override
+    public Booking save(Booking booking) {
+        BookingEntity entity = BookingMapper.toEntity(booking);
+        BookingEntity saved = jpaRepository.save(entity);
+        return BookingMapper.toDomain(saved);
+    }
+    // ... other methods
+}
+```
+
+</CodeGroup>
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Domain Model" href="./domain-model">
+    Deep dive into domain entities and value objects
+  </Card>
+  <Card title="Database Schema" href="./database">
+    Complete database structure and migrations
+  </Card>
+</CardGroup>

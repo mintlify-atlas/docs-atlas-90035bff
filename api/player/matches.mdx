@@ -1,0 +1,825 @@
+---
+title: 'Player Matches API'
+description: 'Intelligent match-making system for finding and organizing padel matches'
+---
+
+# Player Matches API
+
+The Hub platform provides an intelligent match-making system that helps players find opponents, organize matches, and manage invitations.
+
+## Search Available Match Slots
+
+Search for available court slots with eligible players nearby for organizing a match.
+
+### Endpoint
+
+```
+GET /api/match/search
+```
+
+### Query Parameters
+
+<ParamField query="lat" type="number" required>
+  Latitude of the search center point
+</ParamField>
+
+<ParamField query="lng" type="number" required>
+  Longitude of the search center point
+</ParamField>
+
+<ParamField query="radiusKm" type="number" default="10">
+  Search radius in kilometers
+</ParamField>
+
+<ParamField query="date" type="string (date)" required>
+  Date to search for available slots (ISO format: YYYY-MM-DD)
+</ParamField>
+
+<ParamField query="startTimeFrom" type="string (time)" required>
+  Earliest acceptable start time (ISO format: HH:MM:SS)
+</ParamField>
+
+<ParamField query="startTimeTo" type="string (time)" required>
+  Latest acceptable start time (ISO format: HH:MM:SS)
+</ParamField>
+
+<ParamField query="slotDurationMinutes" type="integer" default="90">
+  Duration of the match in minutes
+</ParamField>
+
+<ParamField query="format" type="string" default="TWO_VS_TWO">
+  Match format: `TWO_VS_TWO`, `ONE_VS_ONE`, `AMERICANO`
+</ParamField>
+
+<ParamField query="skillLevel" type="string" default="ANY">
+  Required skill level: `ANY`, `BEGINNER`, `INTERMEDIATE`, `ADVANCED`, `PROFESSIONAL`
+</ParamField>
+
+### Response
+
+Returns an array of available match slots sorted by distance.
+
+<ResponseField name="resourceId" type="string (UUID)" required>
+  ID of the available resource (court)
+</ResponseField>
+
+<ResponseField name="resourceName" type="string" required>
+  Name of the court
+</ResponseField>
+
+<ResponseField name="resourceType" type="string" required>
+  Type of the resource
+</ResponseField>
+
+<ResponseField name="venueId" type="string (UUID)" required>
+  ID of the venue
+</ResponseField>
+
+<ResponseField name="venueName" type="string" required>
+  Name of the venue
+</ResponseField>
+
+<ResponseField name="venueCity" type="string" required>
+  City where the venue is located
+</ResponseField>
+
+<ResponseField name="venueLatitude" type="number" required>
+  Venue latitude coordinate
+</ResponseField>
+
+<ResponseField name="venueLongitude" type="number" required>
+  Venue longitude coordinate
+</ResponseField>
+
+<ResponseField name="distanceKm" type="number" required>
+  Distance from search center in kilometers
+</ResponseField>
+
+<ResponseField name="startTime" type="string (time)" required>
+  Slot start time
+</ResponseField>
+
+<ResponseField name="endTime" type="string (time)" required>
+  Slot end time
+</ResponseField>
+
+<ResponseField name="price" type="number" required>
+  Total price for the court booking
+</ResponseField>
+
+<ResponseField name="currency" type="string" required>
+  Currency code
+</ResponseField>
+
+<ResponseField name="eligiblePlayersNearby" type="integer" required>
+  Number of eligible players in the area who could join this match
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.hub.example.com/api/match/search?lat=40.4168&lng=-3.7038&radiusKm=5&date=2026-03-15&startTimeFrom=18:00:00&startTimeTo=21:00:00&slotDurationMinutes=90&format=TWO_VS_TWO&skillLevel=INTERMEDIATE" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+const params = new URLSearchParams({
+  lat: 40.4168,
+  lng: -3.7038,
+  radiusKm: 5,
+  date: '2026-03-15',
+  startTimeFrom: '18:00:00',
+  startTimeTo: '21:00:00',
+  slotDurationMinutes: 90,
+  format: 'TWO_VS_TWO',
+  skillLevel: 'INTERMEDIATE'
+});
+
+fetch(`https://api.hub.example.com/api/match/search?${params}`, {
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+})
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+[
+  {
+    "resourceId": "660e8400-e29b-41d4-a716-446655440001",
+    "resourceName": "Court 1",
+    "resourceType": "PADEL_COURT",
+    "venueId": "550e8400-e29b-41d4-a716-446655440000",
+    "venueName": "Padel Center Madrid",
+    "venueCity": "Madrid",
+    "venueLatitude": 40.4200,
+    "venueLongitude": -3.7050,
+    "distanceKm": 0.8,
+    "startTime": "18:00:00",
+    "endTime": "19:30:00",
+    "price": 40.00,
+    "currency": "EUR",
+    "eligiblePlayersNearby": 12
+  }
+]
+```
+
+---
+
+## Create Match Request
+
+Create a match request, block the court slot, and initiate the match-making process.
+
+### Endpoint
+
+```
+POST /api/match/requests
+```
+
+### Request Body
+
+<ParamField body="resourceId" type="string (UUID)" required>
+  ID of the resource to book
+</ParamField>
+
+<ParamField body="bookingDate" type="string (date)" required>
+  Date of the match (ISO format: YYYY-MM-DD)
+</ParamField>
+
+<ParamField body="startTime" type="string (time)" required>
+  Start time of the match (ISO format: HH:MM:SS)
+</ParamField>
+
+<ParamField body="slotDurationMinutes" type="integer" required>
+  Duration of the match in minutes
+</ParamField>
+
+<ParamField body="format" type="string" required>
+  Match format: `TWO_VS_TWO`, `ONE_VS_ONE`, `AMERICANO`
+</ParamField>
+
+<ParamField body="skillLevel" type="string" required>
+  Required skill level: `BEGINNER`, `INTERMEDIATE`, `ADVANCED`, `PROFESSIONAL`
+</ParamField>
+
+<ParamField body="customMessage" type="string">
+  Optional custom message to include in player invitations
+</ParamField>
+
+<ParamField body="searchLat" type="number" required>
+  Latitude for searching eligible players
+</ParamField>
+
+<ParamField body="searchLng" type="number" required>
+  Longitude for searching eligible players
+</ParamField>
+
+<ParamField body="searchRadiusKm" type="number" default="10">
+  Search radius for finding eligible players in kilometers
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="string (UUID)" required>
+  Match request ID
+</ResponseField>
+
+<ResponseField name="resourceId" type="string (UUID)" required>
+  ID of the booked resource
+</ResponseField>
+
+<ResponseField name="bookingDate" type="string (date)" required>
+  Date of the match
+</ResponseField>
+
+<ResponseField name="startTime" type="string (time)" required>
+  Start time of the match
+</ResponseField>
+
+<ResponseField name="endTime" type="string (time)" required>
+  End time of the match
+</ResponseField>
+
+<ResponseField name="format" type="string" required>
+  Match format
+</ResponseField>
+
+<ResponseField name="skillLevel" type="string" required>
+  Required skill level
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Match status: `PENDING_PAYMENT`, `OPEN`, `MATCHED`, `CONFIRMED`, `COMPLETED`, `CANCELLED`
+</ResponseField>
+
+<ResponseField name="invitationToken" type="string (UUID)" required>
+  Shareable invitation token for direct invites
+</ResponseField>
+
+<ResponseField name="availableSlots" type="integer" required>
+  Number of available player slots remaining
+</ResponseField>
+
+<ResponseField name="pricePerPlayer" type="number" required>
+  Price per player for the match
+</ResponseField>
+
+<ResponseField name="expiresAt" type="string (timestamp)">
+  Expiration timestamp for pending payment
+</ResponseField>
+
+<ResponseField name="players" type="array" required>
+  Array of players in the match
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.hub.example.com/api/match/requests" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resourceId": "660e8400-e29b-41d4-a716-446655440001",
+    "bookingDate": "2026-03-15",
+    "startTime": "18:00:00",
+    "slotDurationMinutes": 90,
+    "format": "TWO_VS_TWO",
+    "skillLevel": "INTERMEDIATE",
+    "customMessage": "Looking for a fun evening match!",
+    "searchLat": 40.4168,
+    "searchLng": -3.7038,
+    "searchRadiusKm": 5
+  }'
+```
+
+```javascript JavaScript
+fetch('https://api.hub.example.com/api/match/requests', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    resourceId: '660e8400-e29b-41d4-a716-446655440001',
+    bookingDate: '2026-03-15',
+    startTime: '18:00:00',
+    slotDurationMinutes: 90,
+    format: 'TWO_VS_TWO',
+    skillLevel: 'INTERMEDIATE',
+    customMessage: 'Looking for a fun evening match!',
+    searchLat: 40.4168,
+    searchLng: -3.7038,
+    searchRadiusKm: 5
+  })
+})
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "id": "990e8400-e29b-41d4-a716-446655440004",
+  "resourceId": "660e8400-e29b-41d4-a716-446655440001",
+  "bookingDate": "2026-03-15",
+  "startTime": "18:00:00",
+  "endTime": "19:30:00",
+  "format": "TWO_VS_TWO",
+  "skillLevel": "INTERMEDIATE",
+  "status": "PENDING_PAYMENT",
+  "invitationToken": "aa0e8400-e29b-41d4-a716-446655440005",
+  "availableSlots": 3,
+  "pricePerPlayer": 10.00,
+  "expiresAt": "2026-03-08T16:15:00Z",
+  "players": [
+    {
+      "playerId": "770e8400-e29b-41d4-a716-446655440002",
+      "team": "TEAM_A",
+      "role": "ORGANIZER",
+      "joinedAt": "2026-03-08T16:00:00Z",
+      "checkedIn": false,
+      "checkedInAt": null
+    }
+  ]
+}
+```
+
+<Note>
+  After creating a match request, you must confirm payment within 15 minutes using the `/api/match/requests/{id}/confirm-payment` endpoint. Once payment is confirmed, the system will automatically send invitations to eligible players in the area.
+</Note>
+
+---
+
+## Get My Matches
+
+Retrieve all matches the authenticated player is participating in.
+
+### Endpoint
+
+```
+GET /api/match/requests/my
+```
+
+### Response
+
+Returns an array of match request objects (same structure as Create Match Request response).
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.hub.example.com/api/match/requests/my" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+fetch('https://api.hub.example.com/api/match/requests/my', {
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+})
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+</CodeGroup>
+
+---
+
+## Get Match Invitations
+
+Retrieve all pending match invitations for the authenticated player.
+
+### Endpoint
+
+```
+GET /api/match/invitations
+```
+
+### Response
+
+<ResponseField name="id" type="string (UUID)" required>
+  Invitation ID
+</ResponseField>
+
+<ResponseField name="matchRequestId" type="string (UUID)" required>
+  ID of the match request
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Invitation status: `PENDING`, `ACCEPTED`, `DECLINED`, `EXPIRED`
+</ResponseField>
+
+<ResponseField name="sentAt" type="string (timestamp)" required>
+  When the invitation was sent
+</ResponseField>
+
+<ResponseField name="respondedAt" type="string (timestamp)">
+  When the invitation was responded to
+</ResponseField>
+
+<ResponseField name="bookingDate" type="string (date)" required>
+  Date of the match
+</ResponseField>
+
+<ResponseField name="startTime" type="string (time)" required>
+  Start time of the match
+</ResponseField>
+
+<ResponseField name="endTime" type="string (time)" required>
+  End time of the match
+</ResponseField>
+
+<ResponseField name="format" type="string" required>
+  Match format
+</ResponseField>
+
+<ResponseField name="skillLevel" type="string" required>
+  Required skill level
+</ResponseField>
+
+<ResponseField name="matchStatus" type="string" required>
+  Current status of the match
+</ResponseField>
+
+<ResponseField name="availableSlots" type="integer" required>
+  Number of available slots
+</ResponseField>
+
+<ResponseField name="pricePerPlayer" type="number" required>
+  Price per player
+</ResponseField>
+
+<ResponseField name="resourceName" type="string" required>
+  Name of the court
+</ResponseField>
+
+<ResponseField name="venueName" type="string" required>
+  Name of the venue
+</ResponseField>
+
+<ResponseField name="venueCity" type="string" required>
+  City where the venue is located
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.hub.example.com/api/match/invitations" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+fetch('https://api.hub.example.com/api/match/invitations', {
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+})
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+</CodeGroup>
+
+---
+
+## Accept Match Invitation
+
+Accept a match invitation and join the match.
+
+### Endpoint
+
+```
+POST /api/match/invitations/{id}/accept
+```
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  ID of the invitation to accept
+</ParamField>
+
+### Request Body
+
+<ParamField body="team" type="string" required>
+  Team to join: `TEAM_A` or `TEAM_B`
+</ParamField>
+
+### Response
+
+Returns the updated match request object.
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.hub.example.com/api/match/invitations/bb0e8400-e29b-41d4-a716-446655440006/accept" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"team": "TEAM_A"}'
+```
+
+```javascript JavaScript
+fetch('https://api.hub.example.com/api/match/invitations/bb0e8400-e29b-41d4-a716-446655440006/accept', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ team: 'TEAM_A' })
+})
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+</CodeGroup>
+
+---
+
+## Decline Match Invitation
+
+Decline a match invitation.
+
+### Endpoint
+
+```
+POST /api/match/invitations/{id}/decline
+```
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  ID of the invitation to decline
+</ParamField>
+
+### Response
+
+Returns 204 No Content on success.
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.hub.example.com/api/match/invitations/bb0e8400-e29b-41d4-a716-446655440006/decline" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+fetch('https://api.hub.example.com/api/match/invitations/bb0e8400-e29b-41d4-a716-446655440006/decline', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+---
+
+## Join Match by Token
+
+Join a match using a shareable invitation token (for direct invites).
+
+### Endpoint
+
+```
+POST /api/match/join/{token}
+```
+
+### Path Parameters
+
+<ParamField path="token" type="string (UUID)" required>
+  Invitation token from the match organizer
+</ParamField>
+
+### Request Body
+
+<ParamField body="team" type="string" required>
+  Team to join: `TEAM_A` or `TEAM_B`
+</ParamField>
+
+### Response
+
+Returns the updated match request object.
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.hub.example.com/api/match/join/aa0e8400-e29b-41d4-a716-446655440005" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"team": "TEAM_B"}'
+```
+
+```javascript JavaScript
+fetch('https://api.hub.example.com/api/match/join/aa0e8400-e29b-41d4-a716-446655440005', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ team: 'TEAM_B' })
+})
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+</CodeGroup>
+
+---
+
+## Leave Match
+
+Leave a match as a non-organizer player (must be more than 48 hours before match start).
+
+### Endpoint
+
+```
+DELETE /api/match/requests/{id}/leave
+```
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  ID of the match to leave
+</ParamField>
+
+### Response
+
+Returns 204 No Content on success.
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE "https://api.hub.example.com/api/match/requests/990e8400-e29b-41d4-a716-446655440004/leave" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+fetch('https://api.hub.example.com/api/match/requests/990e8400-e29b-41d4-a716-446655440004/leave', {
+  method: 'DELETE',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+<Note>
+  Players can only leave a match if it's more than 48 hours before the start time. For last-minute cancellations, use the Report Absence endpoint instead.
+</Note>
+
+---
+
+## Report Absence
+
+Report that you cannot attend a match. This notifies other players and triggers the system to send substitute invitations.
+
+### Endpoint
+
+```
+POST /api/match/requests/{id}/absence
+```
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  ID of the match
+</ParamField>
+
+### Response
+
+Returns 204 No Content on success.
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.hub.example.com/api/match/requests/990e8400-e29b-41d4-a716-446655440004/absence" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+fetch('https://api.hub.example.com/api/match/requests/990e8400-e29b-41d4-a716-446655440004/absence', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+---
+
+## Check In to Match
+
+Check in to a match using your device's GPS location. This confirms your attendance.
+
+### Endpoint
+
+```
+POST /api/match/requests/{id}/checkin
+```
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  ID of the match to check in to
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="lat" type="number" required>
+  Your current latitude
+</ParamField>
+
+<ParamField query="lng" type="number" required>
+  Your current longitude
+</ParamField>
+
+<ParamField query="accuracy" type="number" required>
+  GPS accuracy in meters
+</ParamField>
+
+### Response
+
+Returns 204 No Content on success.
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.hub.example.com/api/match/requests/990e8400-e29b-41d4-a716-446655440004/checkin?lat=40.4200&lng=-3.7050&accuracy=10" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+const params = new URLSearchParams({
+  lat: 40.4200,
+  lng: -3.7050,
+  accuracy: 10
+});
+
+fetch(`https://api.hub.example.com/api/match/requests/990e8400-e29b-41d4-a716-446655440004/checkin?${params}`, {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+<Note>
+  Check-in is typically required to be within a certain radius of the venue location. Players who don't check in may be marked as "no-show" which affects their reliability score.
+</Note>
+
+---
+
+## Cancel Match Request
+
+Cancel a match request as the organizer.
+
+### Endpoint
+
+```
+DELETE /api/match/requests/{id}
+```
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  ID of the match to cancel
+</ParamField>
+
+### Response
+
+Returns 204 No Content on success.
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE "https://api.hub.example.com/api/match/requests/990e8400-e29b-41d4-a716-446655440004" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+fetch('https://api.hub.example.com/api/match/requests/990e8400-e29b-41d4-a716-446655440004', {
+  method: 'DELETE',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+<Note>
+  Only the match organizer can cancel a match request. All players will be notified and any payments will be refunded according to the cancellation policy.
+</Note>

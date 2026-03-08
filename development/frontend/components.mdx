@@ -1,0 +1,555 @@
+---
+title: 'Component Organization'
+description: 'shadcn/ui integration, component patterns, and Radix UI usage'
+---
+
+## Overview
+
+The Hub frontend uses **shadcn/ui** built on top of **Radix UI primitives** for accessible, customizable components. Components are organized by feature area with a clear separation between UI primitives and business logic.
+
+## shadcn/ui Configuration
+
+<CodeGroup>
+```json components.json
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": true,              // React Server Components enabled
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/app/globals.css",
+    "baseColor": "slate",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "iconLibrary": "lucide",
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui"
+  }
+}
+```
+
+```json package.json
+{
+  "dependencies": {
+    "@radix-ui/react-accordion": "^1.2.12",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-select": "^2.2.6",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@radix-ui/react-toast": "^1.2.15",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.575.0",
+    "tailwind-merge": "^3.5.0"
+  }
+}
+```
+</CodeGroup>
+
+## Component Directory Structure
+
+```
+components/
+├── ui/                    # shadcn/ui components (50+ components)
+│   ├── button.tsx
+│   ├── card.tsx
+│   ├── dialog.tsx
+│   ├── dropdown-menu.tsx
+│   ├── form.tsx
+│   ├── input.tsx
+│   ├── select.tsx
+│   ├── table.tsx
+│   ├── tabs.tsx
+│   ├── toast.tsx
+│   └── ...
+├── admin/                 # Admin-specific components
+│   └── admin-sidebar.tsx
+├── dashboard/             # Player dashboard components
+├── owner/                 # Venue owner components
+├── match/                 # Match management components
+│   ├── match-search-client.tsx
+│   ├── match-create-client.tsx
+│   ├── match-detail-client.tsx
+│   ├── match-map.tsx
+│   └── match-slot-card.tsx
+├── venue/                 # Venue-related components
+├── forms/                 # Reusable form components
+│   └── CityCombobox.tsx
+├── auth-form.tsx          # Authentication form
+├── theme-provider.tsx     # Theme context provider
+└── theme-toggle.tsx       # Dark/light mode toggle
+```
+
+## UI Components (shadcn/ui)
+
+### Available Components
+
+The application includes 50+ shadcn/ui components:
+
+<CardGroup cols={3}>
+  <Card title="Forms" icon="input-text">
+    Button, Input, Select, Checkbox, Radio, Switch, Textarea, Form, Field
+  </Card>
+  <Card title="Layout" icon="grid">
+    Card, Separator, Tabs, Accordion, Resizable, Sidebar, Sheet
+  </Card>
+  <Card title="Feedback" icon="bell">
+    Toast, Alert, Dialog, Drawer, Popover, Tooltip, Progress
+  </Card>
+  <Card title="Navigation" icon="compass">
+    Dropdown Menu, Navigation Menu, Menubar, Context Menu, Breadcrumb
+  </Card>
+  <Card title="Data Display" icon="table">
+    Table, Calendar, Chart, Avatar, Badge, Carousel
+  </Card>
+  <Card title="Utilities" icon="wrench">
+    Scroll Area, Hover Card, Kbd, Skeleton, Spinner, Empty
+  </Card>
+</CardGroup>
+
+### Component Usage Patterns
+
+<Tabs>
+  <Tab title="Button">
+    ```tsx
+    import {Button} from '@/components/ui/button'
+    
+    // Variants
+    <Button variant="default">Default</Button>
+    <Button variant="destructive">Delete</Button>
+    <Button variant="outline">Cancel</Button>
+    <Button variant="ghost">Ghost</Button>
+    <Button variant="link">Link</Button>
+    
+    // Sizes
+    <Button size="sm">Small</Button>
+    <Button size="default">Default</Button>
+    <Button size="lg">Large</Button>
+    <Button size="icon"><Icon /></Button>
+    
+    // With icon
+    import {Plus} from 'lucide-react'
+    <Button>
+      <Plus className="mr-2 h-4 w-4" />
+      Create Match
+    </Button>
+    ```
+  </Tab>
+  <Tab title="Form">
+    ```tsx
+    import {useForm} from 'react-hook-form'
+    import {zodResolver} from '@hookform/resolvers/zod'
+    import {z} from 'zod'
+    import {Form, FormField, FormItem, FormLabel, FormControl, FormMessage} from '@/components/ui/form'
+    import {Input} from '@/components/ui/input'
+    import {Button} from '@/components/ui/button'
+    
+    const formSchema = z.object({
+      name: z.string().min(2, 'Name must be at least 2 characters')
+    })
+    
+    export function VenueForm() {
+      const form = useForm<z.infer<typeof formSchema>>({
+        resolver: zodResolver(formSchema),
+        defaultValues: { name: '' }
+      })
+      
+      async function onSubmit(values: z.infer<typeof formSchema>) {
+        await apiFetchClient('/api/venues', {
+          method: 'POST',
+          body: JSON.stringify(values)
+        })
+      }
+      
+      return (
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <FormField
+              control={form.control}
+              name="name"
+              render={({field}) => (
+                <FormItem>
+                  <FormLabel>Venue Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Padel Club" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit">Create Venue</Button>
+          </form>
+        </Form>
+      )
+    }
+    ```
+  </Tab>
+  <Tab title="Dialog">
+    ```tsx
+    import {Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger} from '@/components/ui/dialog'
+    import {Button} from '@/components/ui/button'
+    
+    export function CreateMatchDialog() {
+      return (
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button>Create Match</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Match</DialogTitle>
+            </DialogHeader>
+            {/* Form content */}
+          </DialogContent>
+        </Dialog>
+      )
+    }
+    ```
+  </Tab>
+  <Tab title="Toast">
+    ```tsx
+    'use client'
+    
+    import {useToast} from '@/hooks/use-toast'
+    import {Button} from '@/components/ui/button'
+    
+    export function BookingButton() {
+      const {toast} = useToast()
+      
+      async function handleBooking() {
+        try {
+          await apiFetchClient('/api/bookings', {
+            method: 'POST',
+            body: JSON.stringify({...})
+          })
+          
+          toast({
+            title: 'Booking confirmed',
+            description: 'Your court has been reserved'
+          })
+        } catch (error) {
+          toast({
+            title: 'Booking failed',
+            description: error.message,
+            variant: 'destructive'
+          })
+        }
+      }
+      
+      return <Button onClick={handleBooking}>Book Court</Button>
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Custom Components
+
+### Feature-Based Components
+
+Components organized by feature area contain business logic:
+
+<CodeGroup>
+```tsx components/match/match-search-client.tsx
+'use client'
+
+import {useState, useEffect} from 'react'
+import {Card, CardHeader, CardTitle, CardContent} from '@/components/ui/card'
+import {Input} from '@/components/ui/input'
+import {Button} from '@/components/ui/button'
+import {apiFetchClient} from '@/lib/api'
+import type {Match, UserProfile} from '@/types'
+
+interface Props {
+  user: UserProfile
+}
+
+export function MatchSearchClient({user}: Props) {
+  const [matches, setMatches] = useState<Match[]>([])
+  const [search, setSearch] = useState('')
+  
+  useEffect(() => {
+    async function loadMatches() {
+      const data = await apiFetchClient<Match[]>('/api/matches')
+      setMatches(data)
+    }
+    loadMatches()
+  }, [])
+  
+  return (
+    <div className="container mx-auto p-6">
+      <Input 
+        placeholder="Search matches..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+      <div className="grid gap-4 mt-4">
+        {matches.map(match => (
+          <MatchSlotCard key={match.id} match={match} />
+        ))}
+      </div>
+    </div>
+  )
+}
+```
+
+```tsx components/match/match-slot-card.tsx
+import {Card, CardHeader, CardTitle, CardContent} from '@/components/ui/card'
+import {Badge} from '@/components/ui/badge'
+import {Button} from '@/components/ui/button'
+import {Calendar, MapPin, Users} from 'lucide-react'
+import {format} from 'date-fns'
+import type {Match} from '@/types'
+
+export function MatchSlotCard({match}: {match: Match}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          {match.venueName}
+          <Badge>{match.skillLevel}</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            {format(new Date(match.dateTime), 'PPP p')}
+          </div>
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            {match.city}
+          </div>
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            {match.currentPlayers}/{match.maxPlayers} players
+          </div>
+        </div>
+        <Button className="w-full mt-4">Join Match</Button>
+      </CardContent>
+    </Card>
+  )
+}
+```
+</CodeGroup>
+
+### Shared Form Components
+
+Reusable form components with complex logic:
+
+```tsx components/forms/CityCombobox.tsx
+'use client'
+
+import {useState} from 'react'
+import {Check, ChevronsUpDown} from 'lucide-react'
+import {cn} from '@/lib/utils'
+import {Button} from '@/components/ui/button'
+import {Command, CommandEmpty, CommandGroup, CommandInput, CommandItem} from '@/components/ui/command'
+import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover'
+import {City} from 'country-state-city'
+
+export function CityCombobox({value, onChange}: {value: string, onChange: (value: string) => void}) {
+  const [open, setOpen] = useState(false)
+  const cities = City.getCitiesOfCountry('ES')
+  
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" className="w-full justify-between">
+          {value || "Select city..."}
+          <ChevronsUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-full p-0">
+        <Command>
+          <CommandInput placeholder="Search city..." />
+          <CommandEmpty>No city found.</CommandEmpty>
+          <CommandGroup>
+            {cities.map((city) => (
+              <CommandItem
+                key={city.name}
+                onSelect={() => {
+                  onChange(city.name)
+                  setOpen(false)
+                }}
+              >
+                <Check className={cn("mr-2 h-4 w-4", value === city.name ? "opacity-100" : "opacity-0")} />
+                {city.name}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+```
+
+## Styling Utilities
+
+### cn() Helper
+
+Combines Tailwind classes with `clsx` and `tailwind-merge`:
+
+```typescript lib/utils.ts
+import {type ClassValue, clsx} from 'clsx'
+import {twMerge} from 'tailwind-merge'
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+```
+
+Usage:
+```tsx
+import {cn} from '@/lib/utils'
+
+<div className={cn(
+  'base-class',
+  isActive && 'active-class',
+  className  // Props className override
+)} />
+```
+
+### Component Variants (CVA)
+
+Using `class-variance-authority` for component variants:
+
+```tsx components/ui/button.tsx
+import {cva, type VariantProps} from 'class-variance-authority'
+
+const buttonVariants = cva(
+  'inline-flex items-center justify-center rounded-md transition-colors',
+  {
+    variants: {
+      variant: {
+        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
+        destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+        outline: 'border border-input hover:bg-accent',
+        ghost: 'hover:bg-accent hover:text-accent-foreground'
+      },
+      size: {
+        default: 'h-10 px-4 py-2',
+        sm: 'h-9 px-3',
+        lg: 'h-11 px-8',
+        icon: 'h-10 w-10'
+      }
+    },
+    defaultVariants: {
+      variant: 'default',
+      size: 'default'
+    }
+  }
+)
+```
+
+## Icon Library
+
+### Lucide React
+
+```tsx
+import {
+  Calendar,
+  MapPin,
+  Users,
+  Settings,
+  LogOut,
+  Plus,
+  Search,
+  ChevronDown
+} from 'lucide-react'
+
+<Button>
+  <Plus className="mr-2 h-4 w-4" />
+  Create
+</Button>
+```
+
+<Note>
+  Lucide React provides 1000+ consistent, customizable icons. Import only the icons you need for optimal bundle size.
+</Note>
+
+## Theme Support
+
+### Theme Provider
+
+```tsx components/theme-provider.tsx
+'use client'
+
+import {ThemeProvider as NextThemesProvider} from 'next-themes'
+import {type ThemeProviderProps} from 'next-themes/dist/types'
+
+export function ThemeProvider({children, ...props}: ThemeProviderProps) {
+  return <NextThemesProvider {...props}>{children}</NextThemesProvider>
+}
+```
+
+### Theme Toggle
+
+```tsx components/theme-toggle.tsx
+'use client'
+
+import {Moon, Sun} from 'lucide-react'
+import {useTheme} from 'next-themes'
+import {Button} from '@/components/ui/button'
+
+export function ThemeToggle() {
+  const {theme, setTheme} = useTheme()
+  
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+    >
+      <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+      <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+    </Button>
+  )
+}
+```
+
+## Component Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Server First" icon="server">
+    Use Server Components by default. Add 'use client' only when needed for interactivity
+  </Card>
+  <Card title="Composition" icon="puzzle-piece">
+    Build complex UIs by composing simple, reusable components
+  </Card>
+  <Card title="Type Safety" icon="shield-check">
+    Define TypeScript interfaces for all component props
+  </Card>
+  <Card title="Accessibility" icon="universal-access">
+    Radix UI components are accessible by default - preserve ARIA attributes
+  </Card>
+</CardGroup>
+
+## Adding New shadcn/ui Components
+
+```bash
+# Add a new component
+npx shadcn@latest add [component-name]
+
+# Examples
+npx shadcn@latest add button
+npx shadcn@latest add dialog
+npx shadcn@latest add form
+```
+
+Components are automatically installed to `src/components/ui/` with proper configuration.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Frontend Structure" icon="folder-tree" href="./structure">
+    Learn about the Next.js app structure and directory organization
+  </Card>
+  <Card title="Routing & Auth" icon="route" href="./routing">
+    Understand routing patterns and authentication integration
+  </Card>
+</CardGroup>

@@ -1,0 +1,200 @@
+---
+title: Venues
+description: Discover and manage padel venues in the Hub platform
+---
+
+## Overview
+
+Venues are the physical locations where players book courts and organize matches. Hub connects players with padel venues across multiple cities, allowing venue owners to manage their facilities while providing players with easy access to courts.
+
+## Finding Venues
+
+### Browse Available Venues
+
+Players can discover venues through the dashboard:
+
+<Steps>
+  <Step title="Access the Dashboard">
+    Navigate to your dashboard to see all available venues in your area
+  </Step>
+  <Step title="Filter by City">
+    Use the city selector to view venues in specific locations
+  </Step>
+  <Step title="Search by Name">
+    Enter a venue name in the search bar to quickly find specific locations
+  </Step>
+</Steps>
+
+### Venue Information
+
+Each venue displays key information to help you choose the right location:
+
+<CardGroup cols={2}>
+  <Card title="Location Details" icon="map-pin">
+    View the venue's address, city, and interactive map with precise coordinates
+  </Card>
+  <Card title="Court Availability" icon="calendar">
+    See the number of active courts (resources) at each venue
+  </Card>
+  <Card title="Pricing Information" icon="euro-sign">
+    Check price ranges across all courts at the venue
+  </Card>
+  <Card title="Ratings & Reviews" icon="star">
+    Read player reviews and see average ratings for each venue
+  </Card>
+</CardGroup>
+
+### Venue Details Page
+
+Click on any venue to view comprehensive information:
+
+- **Photo Gallery**: Browse through venue images with navigation controls
+- **Description**: Read about the venue's facilities and amenities
+- **Location Map**: Interactive map showing the exact venue location
+- **Available Courts**: View all active courts with their specifications
+- **Player Reviews**: Read experiences from other players and leave your own review
+
+<Note>
+  Venues display their status through color-coded badges. Only **ACTIVE** venues appear in search results for players.
+</Note>
+
+## Venue Courts (Resources)
+
+### Court Information
+
+Each venue offers multiple courts with detailed specifications:
+
+- **Sport Type**: Padel, Tennis, Squash, or Badminton
+- **Court Name**: Unique identifier (e.g., "Court 1", "Central Court")
+- **Description**: Additional details about the court
+- **Slot Duration**: Booking time blocks (e.g., 60, 90, or 120 minutes)
+- **Schedule**: Opening and closing times for each day of the week
+- **Pricing**: Dynamic pricing based on day type and time of day
+
+### Viewing Court Availability
+
+To book a specific court:
+
+<Steps>
+  <Step title="Select a Court">
+    Click "Ver disponibilidad" on any court card
+  </Step>
+  <Step title="Choose a Date">
+    Use the calendar to select your preferred date
+  </Step>
+  <Step title="View Time Slots">
+    See all available time slots with real-time availability status
+  </Step>
+  <Step title="Book or Create Match">
+    Either book directly for personal use or create a match to find opponents
+  </Step>
+</Steps>
+
+<Warning>
+  Court availability updates in real-time. Slots may become unavailable if another player books them while you're browsing.
+</Warning>
+
+## Reviews and Ratings
+
+### Writing Reviews
+
+Share your experience with other players:
+
+1. Visit the venue detail page
+2. Scroll to the "Opiniones" section
+3. Select a star rating (1-5 stars)
+4. Write your comment describing your experience
+5. Click "Enviar" to publish your review
+
+### Review Guidelines
+
+When writing reviews, consider:
+
+- **Court Quality**: Surface condition, lighting, net quality
+- **Facilities**: Changing rooms, parking, equipment rental
+- **Customer Service**: Staff friendliness and responsiveness
+- **Value for Money**: Pricing relative to quality
+- **Overall Experience**: Would you recommend it to other players?
+
+## For Venue Owners
+
+### Venue Lifecycle
+
+Venue owners can manage their facilities through a dedicated owner portal:
+
+<Accordion title="Creating a Venue">
+  1. Navigate to the owner dashboard
+  2. Click "Create Venue"
+  3. Fill in venue details (name, address, description)
+  4. Upload venue photos
+  5. Submit for admin review
+  
+  **Status**: New venues start as **PENDING_REVIEW** and require admin approval before going live.
+</Accordion>
+
+<Accordion title="Venue Status Workflow">
+  - **PENDING_REVIEW**: Awaiting admin approval (new venues or after updates)
+  - **ACTIVE**: Publicly visible and accepting bookings
+  - **REJECTED**: Not approved by admin (includes rejection reason)
+  - **SUSPENDED**: Temporarily unavailable (owner or admin action)
+</Accordion>
+
+<Accordion title="Managing Court Resources">
+  Owners can add and configure courts:
+  - Set sport type and court name
+  - Define slot durations
+  - Create weekly schedules
+  - Configure dynamic pricing rules
+  - Upload court photos
+  - Enable/disable specific courts
+</Accordion>
+
+<Accordion title="Updating Venue Information">
+  Owners can update venue details at any time. When an **ACTIVE** venue is updated, it returns to **PENDING_REVIEW** status to ensure quality control.
+</Accordion>
+
+### Managing Venue Images
+
+Venue owners can:
+
+- Upload multiple images to showcase their facility
+- Set display order for the image gallery
+- Remove outdated or unwanted images
+- Update images without affecting venue status
+
+<Note>
+  High-quality images improve booking rates. Include photos of courts, facilities, parking, and amenities.
+</Note>
+
+## Admin Management
+
+Administrators have special controls for venue quality:
+
+- **Approve Venues**: Review and activate pending venues
+- **Reject Venues**: Decline with specific reasons for improvement
+- **Suspend Venues**: Temporarily disable venues with explanation
+- **Monitor Activity**: Track bookings and venue performance
+
+## Location and Maps
+
+All venues include precise geolocation:
+
+- **Latitude/Longitude**: Stored coordinates for accurate positioning
+- **Interactive Maps**: Embedded maps on venue detail pages
+- **Distance Calculation**: Used for match search and player notifications
+- **Address Display**: Full address with street, postal code, city, and country
+
+<Tip>
+  When creating matches, the platform uses venue locations to notify nearby players within your specified search radius.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Make a Booking" icon="calendar-check" href="/features/bookings">
+    Learn how to book courts and manage your reservations
+  </Card>
+  <Card title="Create a Match" icon="users" href="/features/matching">
+    Find opponents and organize matches at your favorite venues
+  </Card>
+</CardGroup>

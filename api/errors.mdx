@@ -1,0 +1,523 @@
+---
+title: 'Error Handling'
+description: 'Understanding API error responses and status codes'
+---
+
+## Overview
+
+The Hub API uses **RFC 7807 Problem Details** for error responses. All errors return a consistent JSON structure with detailed information about what went wrong.
+
+## Error Response Format
+
+Every error response follows this structure:
+
+```json
+{
+  "type": "/errors/validation-error",
+  "title": "Validation Error",
+  "status": 400,
+  "detail": "Request validation failed",
+  "instance": "/api/bookings",
+  "timestamp": "2026-03-08T10:30:00Z",
+  "errors": {
+    "resourceId": "must not be null",
+    "startTime": "must be in the future"
+  }
+}
+```
+
+<ResponseField name="type" type="string" required>
+  URI reference identifying the problem type (e.g., `/errors/not-found`)
+</ResponseField>
+
+<ResponseField name="title" type="string" required>
+  Short, human-readable summary of the problem type
+</ResponseField>
+
+<ResponseField name="status" type="integer" required>
+  HTTP status code (400, 401, 403, 404, 409, 422, 500)
+</ResponseField>
+
+<ResponseField name="detail" type="string" required>
+  Human-readable explanation specific to this occurrence
+</ResponseField>
+
+<ResponseField name="instance" type="string" required>
+  URI reference identifying the specific occurrence (the request path)
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  ISO 8601 timestamp when the error occurred
+</ResponseField>
+
+<ResponseField name="errors" type="object">
+  Additional context about validation errors (field-specific messages)
+</ResponseField>
+
+<ResponseField name="traceId" type="string">
+  Distributed trace ID (only included when `app.expose-trace-id=true`)
+</ResponseField>
+
+## HTTP Status Codes
+
+The API uses standard HTTP status codes:
+
+### 400 Bad Request
+
+The request is malformed or contains invalid data.
+
+**Common causes:**
+- Invalid JSON syntax
+- Missing required fields
+- Type mismatches
+- Constraint violations
+
+<CodeGroup>
+```json Validation Error
+{
+  "type": "/errors/validation-error",
+  "title": "Validation Error",
+  "status": 400,
+  "detail": "Request validation failed",
+  "instance": "/api/owner/venues",
+  "timestamp": "2026-03-08T10:30:00Z",
+  "errors": {
+    "name": "must not be blank",
+    "latitude": "must be between -90 and 90",
+    "longitude": "must be between -180 and 180"
+  }
+}
+```
+
+```json Malformed JSON
+{
+  "type": "/errors/malformed-json",
+  "title": "Malformed JSON",
+  "status": 400,
+  "detail": "Request body is not readable or has invalid JSON",
+  "instance": "/api/bookings",
+  "timestamp": "2026-03-08T10:30:00Z"
+}
+```
+
+```json Type Mismatch
+{
+  "type": "/errors/validation-error",
+  "title": "Validation Error",
+  "status": 400,
+  "detail": "Invalid request parameter",
+  "instance": "/api/venues/invalid-uuid",
+  "timestamp": "2026-03-08T10:30:00Z",
+  "errors": {
+    "parameter": "id",
+    "rejectedValue": "invalid-uuid",
+    "expectedType": "UUID"
+  }
+}
+```
+
+```json Date Format Error
+{
+  "type": "/errors/validation-error",
+  "title": "Validation Error",
+  "status": 400,
+  "detail": "Invalid request parameter",
+  "instance": "/api/bookings",
+  "timestamp": "2026-03-08T10:30:00Z",
+  "errors": {
+    "parameter": "date",
+    "rejectedValue": "2026-13-45",
+    "expectedType": "LocalDate",
+    "message": "Expected format: yyyy-MM-dd (e.g. 2026-02-04)"
+  }
+}
+```
+</CodeGroup>
+
+### 401 Unauthorized
+
+Authentication is required or the provided token is invalid.
+
+```json
+{
+  "type": "/errors/unauthorized",
+  "title": "Unauthorized",
+  "status": 401,
+  "detail": "Authentication is required to access this resource",
+  "instance": "/api/bookings/my",
+  "timestamp": "2026-03-08T10:30:00Z"
+}
+```
+
+**How to fix:**
+- Include valid `Authorization: Bearer <token>` header
+- Refresh expired access token
+- Verify token audience and issuer
+
+### 403 Forbidden
+
+Authentication succeeded but the user lacks permission.
+
+```json
+{
+  "type": "/errors/forbidden",
+  "title": "Forbidden",
+  "status": 403,
+  "detail": "You don't have permission to access this resource",
+  "instance": "/api/owner/venues/123e4567-e89b-12d3-a456-426614174000",
+  "timestamp": "2026-03-08T10:30:00Z"
+}
+```
+
+**Common scenarios:**
+- Accessing another user's resources
+- Attempting owner actions without venue ownership
+- Accessing admin endpoints without admin role
+
+<Warning>
+`403 Forbidden` differs from `401 Unauthorized`. With 403, you are authenticated but not authorized.
+</Warning>
+
+### 404 Not Found
+
+The requested resource does not exist.
+
+<CodeGroup>
+```json Venue Not Found
+{
+  "type": "/errors/not-found",
+  "title": "Not Found",
+  "status": 404,
+  "detail": "Venue not found with id: 123e4567-e89b-12d3-a456-426614174000",
+  "instance": "/api/venues/123e4567-e89b-12d3-a456-426614174000",
+  "timestamp": "2026-03-08T10:30:00Z"
+}
+```
+
+```json Booking Not Found
+{
+  "type": "/errors/not-found",
+  "title": "Not Found",
+  "status": 404,
+  "detail": "Booking not found",
+  "instance": "/api/bookings/999",
+  "timestamp": "2026-03-08T10:30:00Z"
+}
+```
+
+```json Match Not Found
+{
+  "type": "/errors/not-found",
+  "title": "Match Not Found",
+  "status": 404,
+  "detail": "Match with id abc123 does not exist",
+  "instance": "/api/matches/abc123",
+  "timestamp": "2026-03-08T10:30:00Z"
+}
+```
+</CodeGroup>
+
+### 409 Conflict
+
+The request conflicts with the current state of the server.
+
+<CodeGroup>
+```json Slot Not Available
+{
+  "type": "/errors/conflict",
+  "title": "Conflict",
+  "status": 409,
+  "detail": "The selected time slot is no longer available",
+  "instance": "/api/bookings",
+  "timestamp": "2026-03-08T10:30:00Z"
+}
+```
+
+```json Data Integrity Violation
+{
+  "type": "/errors/conflict",
+  "title": "Conflict",
+  "status": 409,
+  "detail": "Operation violates a data constraint",
+  "instance": "/api/owner/venues",
+  "timestamp": "2026-03-08T10:30:00Z"
+}
+```
+</CodeGroup>
+
+### 422 Unprocessable Entity
+
+The request is well-formed but cannot be processed due to business logic rules.
+
+<CodeGroup>
+```json Booking Cancellation Not Allowed
+{
+  "type": "/errors/unprocessable",
+  "title": "Unprocessable",
+  "status": 422,
+  "detail": "Booking cannot be cancelled less than 24 hours before start time",
+  "instance": "/api/bookings/123/cancel",
+  "timestamp": "2026-03-08T10:30:00Z"
+}
+```
+
+```json Match Full
+{
+  "type": "/errors/unprocessable",
+  "title": "Match Error",
+  "status": 422,
+  "detail": "Match is full, cannot join",
+  "instance": "/api/matches/456/join",
+  "timestamp": "2026-03-08T10:30:00Z"
+}
+```
+
+```json Player Already Joined
+{
+  "type": "/errors/unprocessable",
+  "title": "Match Error",
+  "status": 422,
+  "detail": "You have already joined this match",
+  "instance": "/api/matches/456/join",
+  "timestamp": "2026-03-08T10:30:00Z"
+}
+```
+
+```json Time Conflict
+{
+  "type": "/errors/unprocessable",
+  "title": "Match Error",
+  "status": 422,
+  "detail": "You have a conflicting booking or match at this time",
+  "instance": "/api/matches/789/join",
+  "timestamp": "2026-03-08T10:30:00Z"
+}
+```
+
+```json Too Many Active Matches
+{
+  "type": "/errors/unprocessable",
+  "title": "Match Error",
+  "status": 422,
+  "detail": "You have too many active matches. Please complete or leave existing matches first.",
+  "instance": "/api/matches",
+  "timestamp": "2026-03-08T10:30:00Z"
+}
+```
+
+```json Match Creation Cooldown
+{
+  "type": "/errors/unprocessable",
+  "title": "Match Error",
+  "status": 422,
+  "detail": "Please wait before creating another match",
+  "instance": "/api/matches",
+  "timestamp": "2026-03-08T10:30:00Z"
+}
+```
+</CodeGroup>
+
+### 500 Internal Server Error
+
+An unexpected error occurred on the server.
+
+```json
+{
+  "type": "/errors/internal-server-error",
+  "title": "Internal Server Error",
+  "status": 500,
+  "detail": "Unexpected error occurred",
+  "instance": "/api/bookings",
+  "timestamp": "2026-03-08T10:30:00Z",
+  "traceId": "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d"
+}
+```
+
+<Note>
+When `app.expose-trace-id=true`, internal errors include a `traceId` for debugging. Provide this ID when contacting support.
+</Note>
+
+## Error Types Reference
+
+Complete list of error types returned by the API:
+
+| Error Type | Status | Description |
+|-----------|--------|-------------|
+| `/errors/unauthorized` | 401 | Authentication required or token invalid |
+| `/errors/forbidden` | 403 | Insufficient permissions |
+| `/errors/validation-error` | 400 | Request validation failed |
+| `/errors/malformed-json` | 400 | Invalid JSON in request body |
+| `/errors/bad-request` | 400 | Invalid request |
+| `/errors/missing-parameter` | 400 | Required parameter missing |
+| `/errors/not-found` | 404 | Resource not found |
+| `/errors/conflict` | 409 | Resource conflict or constraint violation |
+| `/errors/unprocessable` | 422 | Business logic rule violation |
+| `/errors/internal-server-error` | 500 | Unexpected server error |
+
+## Domain-Specific Errors
+
+The API includes domain-specific error handling for different modules:
+
+### Booking Errors
+
+- `BookingNotFoundException` - 404
+- `SlotNotAvailableException` - 409  
+- `BookingCancellationNotAllowedException` - 422
+
+### Match Errors
+
+- `MatchNotFoundException` - 404
+- `InvitationNotFoundException` - 404
+- `MatchFullException` - 422
+- `TeamFullException` - 422
+- `PlayerAlreadyJoinedException` - 422
+- `PlayerTimeConflictException` - 422
+- `MatchNotOpenException` - 422
+- `MatchLeaveNotAllowedException` - 422
+- `PlayerMatchBannedException` - 422
+- `TooManyActiveMatchesException` - 422
+- `MatchCreationCooldownException` - 422
+- `InvitationAlreadyRespondedException` - 422
+- `InvitationNotYoursException` - 403
+- `NotMatchOrganizerException` - 403
+
+### Venue Errors
+
+- `VenueNotFoundException` - 404
+- `VenueImageNotFoundException` - 404
+
+### Resource Errors
+
+- `ResourceNotFoundException` - 404
+- `ResourceImageNotFoundException` - 404
+
+### User Errors
+
+- `UserProfileNotFoundException` - 404
+
+## Best Practices
+
+### Handle Errors Gracefully
+
+Always check the HTTP status code and parse the error response:
+
+```javascript
+try {
+  const response = await fetch('/api/bookings', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(bookingData)
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    
+    // Handle specific error types
+    switch (error.type) {
+      case '/errors/validation-error':
+        // Show field-specific validation errors
+        displayValidationErrors(error.errors);
+        break;
+      case '/errors/conflict':
+        // Slot not available - suggest alternatives
+        suggestAlternativeSlots();
+        break;
+      case '/errors/unauthorized':
+        // Refresh token and retry
+        await refreshToken();
+        break;
+      default:
+        // Generic error handling
+        showError(error.detail);
+    }
+    
+    return;
+  }
+
+  const booking = await response.json();
+  // Success handling...
+} catch (error) {
+  // Network or parsing error
+  console.error('Request failed:', error);
+}
+```
+
+### Use Validation Errors
+
+For 400 validation errors, the `errors` object maps field names to error messages:
+
+```json
+{
+  "errors": {
+    "name": "must not be blank",
+    "latitude": "must be between -90 and 90"
+  }
+}
+```
+
+Display these errors next to the corresponding form fields.
+
+### Log Trace IDs
+
+For 500 errors, save the `traceId` for support requests:
+
+```javascript
+if (error.status === 500 && error.traceId) {
+  console.error(`Server error - Trace ID: ${error.traceId}`);
+  // Show trace ID to user for support
+}
+```
+
+<Warning>
+Never expose sensitive information in error messages. The API follows this principle - internal errors return generic messages.
+</Warning>
+
+## Testing Error Scenarios
+
+Test common error scenarios:
+
+<CodeGroup>
+```bash Missing Auth Token
+curl -X GET https://api.yourdomain.com/api/bookings/my
+# Returns 401 Unauthorized
+```
+
+```bash Invalid JSON
+curl -X POST https://api.yourdomain.com/api/bookings \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{invalid json}'
+# Returns 400 Malformed JSON
+```
+
+```bash Validation Error
+curl -X POST https://api.yourdomain.com/api/owner/venues \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "",
+    "latitude": 200
+  }'
+# Returns 400 Validation Error
+```
+
+```bash Not Found
+curl -X GET https://api.yourdomain.com/api/venues/00000000-0000-0000-0000-000000000000 \
+  -H "Authorization: Bearer $TOKEN"
+# Returns 404 Not Found
+```
+</CodeGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/api/authentication">
+    Learn about Auth0 OAuth2 authentication
+  </Card>
+  <Card title="API Endpoints" icon="code" href="/api/venues/management">
+    Explore available API endpoints
+  </Card>
+</CardGroup>

@@ -1,80 +1,281 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: 'Quickstart'
+description: 'Get Hub up and running in under 10 minutes'
 ---
 
-## Get started in three steps
+Get your Hub platform running locally in under 10 minutes. This guide will take you from cloning the repository to accessing the application.
 
-Get your documentation site running locally and make your first customization.
+## Prerequisites
 
-### Step 1: Set up your local environment
+Before you begin, ensure you have the following installed:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+- **Docker** (version 20.10 or higher) and **Docker Compose** (v2.0+)
+- **Git** for cloning the repository
+- **Node.js 18+** and **npm** for the frontend
+- **Java 21** for local backend development (optional)
+- **Auth0 account** for authentication setup
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+If you're just getting started, Docker and Docker Compose are all you need to run the full stack.
 </Note>
+
+## Quick Start
+
+<Steps>
+  <Step title="Clone the Repository">
+    Clone the Hub repository to your local machine:
+
+    ```bash
+    git clone <repository-url>
+    cd hub
+    ```
+  </Step>
+
+  <Step title="Configure Environment Variables">
+    Create a `.env` file in the root directory with the required environment variables:
+
+    ```bash .env
+    # Database Configuration
+    POSTGRES_DB=hub
+    POSTGRES_USER=hub_user
+    POSTGRES_PASSWORD=your_secure_password
+    DB_HOST=postgres
+    DB_PORT=5432
+
+    # Backend Configuration
+    BACKEND_PORT=8080
+
+    # Auth0 Configuration
+    AUTH0_ISSUER=https://your-tenant.auth0.com/
+    AUTH0_AUDIENCE=https://api.yourdomain.com
+
+    # Cloudinary (Image Storage)
+    CLOUDINARY_CLOUD_NAME=your_cloud_name
+    CLOUDINARY_API_KEY=your_api_key
+    CLOUDINARY_API_SECRET=your_api_secret
+
+    # Application Configuration
+    APP_ADMIN_EMAIL=admin@yourdomain.com
+    APP_MAIL_FROM=noreply@padelhub.com
+
+    # Email Configuration (Brevo)
+    MAIL_USERNAME=your_email@domain.com
+    MAIL_PASSWORD=your_password
+    ```
+
+    <Warning>
+    Never commit your `.env` file to version control. Keep your credentials secure.
+    </Warning>
+  </Step>
+
+  <Step title="Configure Auth0">
+    Set up your Auth0 application:
+
+    1. Create a new Auth0 application (Regular Web Application)
+    2. Configure the following settings:
+       - **Allowed Callback URLs**: `http://localhost:3000/api/auth/callback`
+       - **Allowed Logout URLs**: `http://localhost:3000`
+       - **Allowed Web Origins**: `http://localhost:3000`
+    3. Create an API in Auth0 with the identifier matching your `AUTH0_AUDIENCE`
+    4. Update your `.env` file with the Auth0 credentials
+  </Step>
+
+  <Step title="Start the Backend Services">
+    Use Docker Compose to start the PostgreSQL database and backend:
+
+    ```bash
+    docker compose up -d
+    ```
+
+    This will start:
+    - **PostgreSQL** with PostGIS extension on port `5432`
+    - **Spring Boot backend** on port `8080`
+    - **pgAdmin** on port `5050` (optional database management)
+
+    Verify the services are running:
+
+    ```bash
+    docker compose ps
+    ```
+
+    You should see all services in a "running" state.
+  </Step>
+
+  <Step title="Set Up Frontend Environment">
+    Navigate to the frontend directory and create a `.env.local` file:
+
+    ```bash
+    cd frontend/sports-hub-frontend
+    ```
+
+    Create `.env.local` with the following variables:
+
+    ```bash .env.local
+    # Auth0 Frontend Configuration
+    AUTH0_SECRET=use_a_long_random_string_here
+    AUTH0_BASE_URL=http://localhost:3000
+    AUTH0_ISSUER_BASE_URL=https://your-tenant.auth0.com
+    AUTH0_CLIENT_ID=your_client_id
+    AUTH0_CLIENT_SECRET=your_client_secret
+    AUTH0_AUDIENCE=https://api.yourdomain.com
+    AUTH0_DOMAIN=your-tenant.auth0.com
+
+    # API Configuration
+    NEXT_PUBLIC_API_URL=http://localhost:8080
+    ```
+
+    <Tip>
+    Generate a secure random string for `AUTH0_SECRET` using: `openssl rand -hex 32`
+    </Tip>
+  </Step>
+
+  <Step title="Install Frontend Dependencies">
+    Install the required npm packages:
+
+    ```bash
+    npm install
+    ```
+  </Step>
+
+  <Step title="Start the Frontend">
+    Run the Next.js development server:
+
+    ```bash
+    npm run dev
+    ```
+
+    The frontend will start on `http://localhost:3000`
+  </Step>
+
+  <Step title="Access the Application">
+    Open your browser and navigate to:
+
+    ```
+    http://localhost:3000
+    ```
+
+    You should see the Hub login page. Click the login button to authenticate with Auth0.
+  </Step>
+</Steps>
+
+## Verify Your Setup
+
+<CardGroup cols={2}>
+  <Card title="Backend API" icon="code">
+    Check the backend health endpoint:
+    ```bash
+    curl http://localhost:8080/actuator/health
+    ```
+  </Card>
+
+  <Card title="API Documentation" icon="book">
+    Access Swagger UI at:
+    ```
+    http://localhost:8080/swagger-ui.html
+    ```
+  </Card>
+
+  <Card title="Database Admin" icon="database">
+    Access pgAdmin at:
+    ```
+    http://localhost:5050
+    ```
+    Login: `admin@hub.com` / `admin`
+  </Card>
+
+  <Card title="Frontend" icon="browser">
+    Access the application at:
+    ```
+    http://localhost:3000
+    ```
+  </Card>
+</CardGroup>
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Database connection failed">
+    Make sure PostgreSQL is running and the credentials in your `.env` file match:
+    
+    ```bash
+    docker compose logs postgres
+    ```
+    
+    Check that the database is healthy:
+    ```bash
+    docker compose ps postgres
+    ```
+  </Accordion>
+
+  <Accordion title="Backend fails to start">
+    Check the backend logs for errors:
+    
+    ```bash
+    docker compose logs backend
+    ```
+    
+    Common issues:
+    - Auth0 configuration is invalid
+    - Database connection failed
+    - Missing environment variables
+  </Accordion>
+
+  <Accordion title="Auth0 authentication fails">
+    Verify that:
+    - Your Auth0 callback URLs are configured correctly
+    - The `AUTH0_SECRET` is set in `.env.local`
+    - The `AUTH0_AUDIENCE` matches between backend and frontend
+    - Your Auth0 application type is "Regular Web Application"
+  </Accordion>
+
+  <Accordion title="Frontend can't connect to backend">
+    Ensure that:
+    - The backend is running on `http://localhost:8080`
+    - `NEXT_PUBLIC_API_URL` in `.env.local` is set to `http://localhost:8080`
+    - CORS is properly configured in the backend
+  </Accordion>
+</AccordionGroup>
+
+## Useful Commands
+
+Quick reference for common development tasks:
+
+```bash
+# View all logs
+docker compose logs -f
+
+# View backend logs only
+docker compose logs -f backend
+
+# Restart all services
+docker compose restart
+
+# Stop all services
+docker compose down
+
+# Stop and remove volumes (reset database)
+docker compose down -v
+
+# Access database shell
+docker compose exec postgres psql -U hub_user -d hub
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation Guide" icon="download" href="/installation">
+    Learn about detailed installation options and local development setup
+  </Card>
+
+  <Card title="API Reference" icon="code" href="/api/introduction">
+    Explore the available API endpoints and authentication
+  </Card>
+
+  <Card title="Architecture" icon="sitemap" href="/development/architecture">
+    Understand the platform architecture and technology stack
+  </Card>
+
+  <Card title="Development Guide" icon="code-branch" href="/development/setup">
+    Learn about the development workflow and best practices
+  </Card>
+</CardGroup>

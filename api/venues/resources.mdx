@@ -1,0 +1,649 @@
+---
+title: 'Venue Resources'
+description: 'Manage bookable resources (courts) within venues'
+---
+
+## List Resources by Venue
+
+Retrieve all active resources for a specific venue.
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.hub.example/api/venues/{venueId}/resources" \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const venueId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const response = await fetch(
+  `https://api.hub.example/api/venues/${venueId}/resources`,
+  {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  }
+);
+
+const resources = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="venueId" type="string (UUID)" required>
+  The unique identifier of the venue
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="string (UUID)" required>
+  Unique identifier for the resource
+</ResponseField>
+
+<ResponseField name="venueId" type="string (UUID)" required>
+  ID of the parent venue
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Resource name (e.g., "Court 1")
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Resource description
+</ResponseField>
+
+<ResponseField name="type" type="string" required>
+  Resource type (e.g., PADEL_COURT, TENNIS_COURT)
+</ResponseField>
+
+<ResponseField name="slotDurationMinutes" type="integer" required>
+  Duration of each booking slot in minutes
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Resource status (ACTIVE, SUSPENDED, PENDING_APPROVAL, REJECTED)
+</ResponseField>
+
+<ResponseField name="rejectReason" type="string">
+  Reason for rejection if status is REJECTED
+</ResponseField>
+
+<ResponseField name="schedules" type="array">
+  Weekly schedule defining opening hours
+  <ResponseField name="dayOfWeek" type="string">
+    Day of week (MONDAY, TUESDAY, etc.)
+  </ResponseField>
+  <ResponseField name="openingTime" type="string (HH:mm:ss)">
+    Opening time
+  </ResponseField>
+  <ResponseField name="closingTime" type="string (HH:mm:ss)">
+    Closing time
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="priceRules" type="array">
+  Pricing rules for different time periods
+  <ResponseField name="id" type="string (UUID)">
+    Price rule identifier
+  </ResponseField>
+  <ResponseField name="dayType" type="string">
+    WEEKDAY, WEEKEND, or HOLIDAY
+  </ResponseField>
+  <ResponseField name="startTime" type="string (HH:mm:ss)">
+    Start time for this pricing rule
+  </ResponseField>
+  <ResponseField name="endTime" type="string (HH:mm:ss)">
+    End time for this pricing rule
+  </ResponseField>
+  <ResponseField name="price" type="number">
+    Price per slot
+  </ResponseField>
+  <ResponseField name="currency" type="string">
+    Currency code (e.g., EUR, USD)
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="images" type="array">
+  Array of resource images
+  <ResponseField name="id" type="string (UUID)">
+    Image identifier
+  </ResponseField>
+  <ResponseField name="url" type="string">
+    Image URL
+  </ResponseField>
+  <ResponseField name="publicId" type="string">
+    Public ID for CDN reference
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="createdAt" type="string (ISO 8601)" required>
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string (ISO 8601)" required>
+  Last update timestamp
+</ResponseField>
+
+---
+
+## Get Resource Availability
+
+Get available time slots for a specific resource on a given date.
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.hub.example/api/resources/{id}/slots?date=2026-03-15" \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const resourceId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const date = '2026-03-15';
+const response = await fetch(
+  `https://api.hub.example/api/resources/${resourceId}/slots?date=${date}`,
+  {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  }
+);
+
+const slots = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The unique identifier of the resource
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="date" type="string (ISO 8601 date)" required>
+  The date to check availability (format: YYYY-MM-DD)
+</ParamField>
+
+### Response
+
+<ResponseField name="startTime" type="string (HH:mm:ss)" required>
+  Slot start time
+</ResponseField>
+
+<ResponseField name="endTime" type="string (HH:mm:ss)" required>
+  Slot end time
+</ResponseField>
+
+<ResponseField name="available" type="boolean" required>
+  Whether this slot is available for booking
+</ResponseField>
+
+<ResponseField name="price" type="number" required>
+  Price for this slot
+</ResponseField>
+
+<ResponseField name="currency" type="string" required>
+  Currency code (e.g., EUR, USD)
+</ResponseField>
+
+<Note>
+  The availability endpoint returns all slots for the specified date according to the resource's schedule. Unavailable slots have `available: false`.
+</Note>
+
+---
+
+## Create Resource (Owner)
+
+Create a new resource within a venue. Requires owner authentication.
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.hub.example/api/owner/venues/{venueId}/resources" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "name": "Court 1",
+    "description": "Main padel court with professional surface",
+    "type": "PADEL_COURT",
+    "slotDurationMinutes": 90
+  }'
+```
+
+```javascript JavaScript
+const venueId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const response = await fetch(
+  `https://api.hub.example/api/owner/venues/${venueId}/resources`,
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer YOUR_TOKEN'
+    },
+    body: JSON.stringify({
+      name: 'Court 1',
+      description: 'Main padel court with professional surface',
+      type: 'PADEL_COURT',
+      slotDurationMinutes: 90
+    })
+  }
+);
+
+const resource = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="venueId" type="string (UUID)" required>
+  The unique identifier of the venue
+</ParamField>
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Resource name (must not be blank)
+</ParamField>
+
+<ParamField body="description" type="string">
+  Detailed description of the resource
+</ParamField>
+
+<ParamField body="type" type="string" required>
+  Resource type (e.g., PADEL_COURT, TENNIS_COURT)
+</ParamField>
+
+<ParamField body="slotDurationMinutes" type="integer" required>
+  Duration of each booking slot in minutes (e.g., 60, 90)
+</ParamField>
+
+### Response
+
+Returns the created resource object (201 Created).
+
+---
+
+## Set Resource Schedule (Owner)
+
+Set the operating hours for a specific day of the week.
+
+<CodeGroup>
+```bash cURL
+curl -X PUT "https://api.hub.example/api/owner/resources/{id}/schedules" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "dayOfWeek": "MONDAY",
+    "openingTime": "08:00:00",
+    "closingTime": "22:00:00"
+  }'
+```
+
+```javascript JavaScript
+const resourceId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const response = await fetch(
+  `https://api.hub.example/api/owner/resources/${resourceId}/schedules`,
+  {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer YOUR_TOKEN'
+    },
+    body: JSON.stringify({
+      dayOfWeek: 'MONDAY',
+      openingTime: '08:00:00',
+      closingTime: '22:00:00'
+    })
+  }
+);
+
+const resource = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The unique identifier of the resource
+</ParamField>
+
+### Request Body
+
+<ParamField body="dayOfWeek" type="string" required>
+  Day of week (MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY)
+</ParamField>
+
+<ParamField body="openingTime" type="string (HH:mm:ss)" required>
+  Opening time in 24-hour format
+</ParamField>
+
+<ParamField body="closingTime" type="string (HH:mm:ss)" required>
+  Closing time in 24-hour format
+</ParamField>
+
+### Response
+
+Returns the updated resource object with the new schedule.
+
+---
+
+## Add Price Rule (Owner)
+
+Add a pricing rule to a resource for specific time periods.
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.hub.example/api/owner/resources/{id}/price-rules" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "dayType": "WEEKDAY",
+    "startTime": "09:00:00",
+    "endTime": "17:00:00",
+    "price": 35.00,
+    "currency": "EUR"
+  }'
+```
+
+```javascript JavaScript
+const resourceId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const response = await fetch(
+  `https://api.hub.example/api/owner/resources/${resourceId}/price-rules`,
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer YOUR_TOKEN'
+    },
+    body: JSON.stringify({
+      dayType: 'WEEKDAY',
+      startTime: '09:00:00',
+      endTime: '17:00:00',
+      price: 35.00,
+      currency: 'EUR'
+    })
+  }
+);
+
+const resource = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The unique identifier of the resource
+</ParamField>
+
+### Request Body
+
+<ParamField body="dayType" type="string" required>
+  Day type: WEEKDAY, WEEKEND, or HOLIDAY
+</ParamField>
+
+<ParamField body="startTime" type="string (HH:mm:ss)" required>
+  Start time for this pricing rule
+</ParamField>
+
+<ParamField body="endTime" type="string (HH:mm:ss)" required>
+  End time for this pricing rule
+</ParamField>
+
+<ParamField body="price" type="number" required>
+  Price per slot
+</ParamField>
+
+<ParamField body="currency" type="string" required>
+  Currency code (e.g., EUR, USD, GBP)
+</ParamField>
+
+### Response
+
+Returns the updated resource object with the new price rule included.
+
+---
+
+## Remove Price Rule (Owner)
+
+Remove a pricing rule from a resource.
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE "https://api.hub.example/api/owner/resources/{id}/price-rules/{ruleId}" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const resourceId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const ruleId = 'rule-1234-5678-abcd';
+const response = await fetch(
+  `https://api.hub.example/api/owner/resources/${resourceId}/price-rules/${ruleId}`,
+  {
+    method: 'DELETE',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The unique identifier of the resource
+</ParamField>
+
+<ParamField path="ruleId" type="string (UUID)" required>
+  The unique identifier of the price rule to remove
+</ParamField>
+
+### Response
+
+Returns 204 No Content on success.
+
+---
+
+## Suspend Resource (Owner)
+
+Temporarily suspend a resource, making it unavailable for bookings.
+
+<CodeGroup>
+```bash cURL
+curl -X PATCH "https://api.hub.example/api/owner/resources/{id}/suspend" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const resourceId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const response = await fetch(
+  `https://api.hub.example/api/owner/resources/${resourceId}/suspend`,
+  {
+    method: 'PATCH',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The unique identifier of the resource to suspend
+</ParamField>
+
+### Response
+
+Returns 204 No Content on success.
+
+---
+
+## Reactivate Resource (Owner)
+
+Reactivate a previously suspended resource.
+
+<CodeGroup>
+```bash cURL
+curl -X PATCH "https://api.hub.example/api/owner/resources/{id}/reactivate" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const resourceId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const response = await fetch(
+  `https://api.hub.example/api/owner/resources/${resourceId}/reactivate`,
+  {
+    method: 'PATCH',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The unique identifier of the resource to reactivate
+</ParamField>
+
+### Response
+
+Returns 204 No Content on success.
+
+---
+
+## Get My Resources (Owner)
+
+Retrieve all resources across all venues owned by the authenticated user.
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.hub.example/api/owner/resources" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.hub.example/api/owner/resources', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_TOKEN'
+  }
+});
+
+const myResources = await response.json();
+```
+</CodeGroup>
+
+### Response
+
+Returns an array of resource objects across all venues owned by the authenticated user.
+
+---
+
+## Add Resource Image (Owner)
+
+Add an image to a resource.
+
+<Note>
+  Images should be uploaded to your CDN (e.g., Cloudinary) first, then the URL and public ID should be submitted to this endpoint.
+</Note>
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.hub.example/api/owner/resources/{id}/images" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "url": "https://cdn.example.com/images/court-1.jpg",
+    "publicId": "resources/court_xyz789"
+  }'
+```
+
+```javascript JavaScript
+const resourceId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const response = await fetch(
+  `https://api.hub.example/api/owner/resources/${resourceId}/images`,
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer YOUR_TOKEN'
+    },
+    body: JSON.stringify({
+      url: 'https://cdn.example.com/images/court-1.jpg',
+      publicId: 'resources/court_xyz789'
+    })
+  }
+);
+
+const resource = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The unique identifier of the resource
+</ParamField>
+
+### Request Body
+
+<ParamField body="url" type="string" required>
+  Full URL to the image (must not be blank)
+</ParamField>
+
+<ParamField body="publicId" type="string" required>
+  Public identifier from your CDN (must not be blank)
+</ParamField>
+
+### Response
+
+Returns the updated resource object with the new image included.
+
+---
+
+## Delete Resource Image (Owner)
+
+Remove an image from a resource.
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE "https://api.hub.example/api/owner/resources/{id}/images/{imageId}" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const resourceId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const imageId = 'img-9876-5432-dcba';
+const response = await fetch(
+  `https://api.hub.example/api/owner/resources/${resourceId}/images/${imageId}`,
+  {
+    method: 'DELETE',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The unique identifier of the resource
+</ParamField>
+
+<ParamField path="imageId" type="string (UUID)" required>
+  The unique identifier of the image to remove
+</ParamField>
+
+### Response
+
+Returns 200 OK on success.

@@ -1,0 +1,132 @@
+---
+title: 'Admin - Statistics'
+description: 'Get system-wide statistics and metrics'
+api: 'GET /api/admin/stats'
+---
+
+<Warning>
+  This endpoint requires ADMIN role. Unauthorized requests will return 403 Forbidden.
+</Warning>
+
+## Get Admin Statistics
+
+Retrieve comprehensive statistics about the platform including users, venues, resources, bookings, and revenue.
+
+<CodeGroup>
+```bash cURL
+curl -X GET 'https://api.sportshub.com/api/admin/stats' \
+  -H 'Authorization: Bearer YOUR_JWT_TOKEN'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.sportshub.com/api/admin/stats', {
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+});
+const stats = await response.json();
+console.log(`Total users: ${stats.totalUsers}`);
+console.log(`Revenue this month: ${stats.revenueThisMonth}`);
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://api.sportshub.com/api/admin/stats',
+    headers={'Authorization': 'Bearer YOUR_JWT_TOKEN'}
+)
+stats = response.json()
+print(f"Total users: {stats['totalUsers']}")
+print(f"Revenue this month: {stats['revenueThisMonth']}")
+```
+</CodeGroup>
+
+### Response
+
+<ResponseField name="totalUsers" type="integer">
+  Total number of registered users in the system
+</ResponseField>
+
+<ResponseField name="totalOwners" type="integer">
+  Total number of users with OWNER role
+</ResponseField>
+
+<ResponseField name="totalPlayers" type="integer">
+  Total number of users with PLAYER role
+</ResponseField>
+
+<ResponseField name="totalVenues" type="integer">
+  Total number of venues registered on the platform
+</ResponseField>
+
+<ResponseField name="activeVenues" type="integer">
+  Number of active venues currently accepting bookings
+</ResponseField>
+
+<ResponseField name="pendingVenues" type="integer">
+  Number of venues awaiting admin approval
+</ResponseField>
+
+<ResponseField name="totalResources" type="integer">
+  Total number of bookable resources (courts, fields, etc.)
+</ResponseField>
+
+<ResponseField name="activeResources" type="integer">
+  Number of active resources available for booking
+</ResponseField>
+
+<ResponseField name="pendingResources" type="integer">
+  Number of resources awaiting admin approval
+</ResponseField>
+
+<ResponseField name="pendingOwnerRequests" type="integer">
+  Number of users requesting OWNER role approval
+</ResponseField>
+
+<ResponseField name="revenueThisMonth" type="decimal">
+  Total revenue generated in the current month
+</ResponseField>
+
+<ResponseField name="totalBookings" type="integer">
+  Total number of bookings created on the platform
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "totalUsers": 1542,
+  "totalOwners": 87,
+  "totalPlayers": 1443,
+  "totalVenues": 45,
+  "activeVenues": 42,
+  "pendingVenues": 3,
+  "totalResources": 234,
+  "activeResources": 218,
+  "pendingResources": 16,
+  "pendingOwnerRequests": 12,
+  "revenueThisMonth": 24567.50,
+  "totalBookings": 8932
+}
+```
+
+## Use Cases
+
+### Dashboard Overview
+
+Use this endpoint to populate admin dashboard with key metrics:
+
+- **User Growth**: Track total users, owners, and players
+- **Venue Management**: Monitor active vs pending venues
+- **Resource Availability**: Track total and active resources
+- **Revenue Tracking**: Monitor monthly revenue trends
+- **Approval Queue**: See pending owner requests and venue/resource approvals
+
+### Reporting
+
+This data can be used for:
+- Monthly business reports
+- Growth analytics
+- Resource utilization analysis
+- Revenue forecasting

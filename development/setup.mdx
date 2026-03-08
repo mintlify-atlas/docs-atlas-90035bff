@@ -1,0 +1,267 @@
+---
+title: Development Setup
+description: Get your local development environment ready to contribute to Hub
+---
+
+## Prerequisites
+
+Before setting up the project, ensure you have the following installed:
+
+<CardGroup cols={2}>
+  <Card title="Java 21" icon="coffee">
+    Required for backend development
+  </Card>
+  <Card title="Node.js 20+" icon="node-js">
+    Required for frontend development
+  </Card>
+  <Card title="Docker & Docker Compose" icon="docker">
+    Required for running PostgreSQL and services
+  </Card>
+  <Card title="Maven" icon="box">
+    Java build tool (included via Maven Wrapper)
+  </Card>
+</CardGroup>
+
+## Initial Setup
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone <repository-url>
+    cd hub
+    ```
+  </Step>
+
+  <Step title="Configure environment variables">
+    Create a `.env` file in the project root with the following variables:
+
+    ```bash
+    # Database
+    POSTGRES_DB=hub_db
+    POSTGRES_USER=hub_user
+    POSTGRES_PASSWORD=hub_password
+    DB_HOST=localhost
+    DB_PORT=5432
+
+    # Auth0
+    AUTH0_ISSUER=https://your-tenant.auth0.com/
+    AUTH0_AUDIENCE=your-api-identifier
+
+    # Cloudinary (for image uploads)
+    CLOUDINARY_CLOUD_NAME=your-cloud-name
+    CLOUDINARY_API_KEY=your-api-key
+    CLOUDINARY_API_SECRET=your-api-secret
+
+    # Email
+    APP_MAIL_FROM=noreply@padelhub.com
+    BREVO_API_KEY=your-brevo-api-key
+
+    # Admin
+    APP_ADMIN_EMAIL=admin@example.com
+
+    # Ports
+    BACKEND_PORT=8080
+    FRONTEND_PORT=3000
+    ```
+
+    <Note>
+      For local development, you can use dummy values for Auth0 and Cloudinary if you're not testing those features.
+    </Note>
+  </Step>
+
+  <Step title="Start infrastructure services">
+    Use Docker Compose to start PostgreSQL and pgAdmin:
+
+    ```bash
+    make up
+    ```
+
+    This starts:
+    - **PostgreSQL** (with PostGIS extension) on port `5432`
+    - **pgAdmin** on port `5050` (access at `http://localhost:5050`)
+
+    <Note>
+      pgAdmin credentials: `admin@hub.com` / `admin`
+    </Note>
+  </Step>
+
+  <Step title="Run the backend">
+    The backend uses Spring Boot with Maven:
+
+    ```bash
+    make backend-run
+    ```
+
+    Or manually:
+
+    ```bash
+    cd backend
+    ./mvnw spring-boot:run
+    ```
+
+    The API will be available at `http://localhost:8080`
+  </Step>
+
+  <Step title="Run the frontend">
+    In a separate terminal, start the Next.js development server:
+
+    ```bash
+    cd frontend/sports-hub-frontend
+    npm install
+    npm run dev
+    ```
+
+    The frontend will be available at `http://localhost:3000`
+  </Step>
+</Steps>
+
+## Development Workflow
+
+### Backend Commands
+
+The project includes a `Makefile` with helpful commands:
+
+<CodeGroup>
+```bash Run backend
+make backend-run
+```
+
+```bash Run tests
+make backend-test
+```
+
+```bash Build JAR
+make backend-build
+```
+
+```bash Format code
+make backend-format
+```
+
+```bash Check formatting
+make backend-format-check
+```
+
+```bash Clean build
+make backend-clean
+```
+</CodeGroup>
+
+### Frontend Commands
+
+<CodeGroup>
+```bash Development server
+npm run dev
+```
+
+```bash Build for production
+npm run build
+```
+
+```bash Start production server
+npm run start
+```
+
+```bash Lint code
+npm run lint
+```
+</CodeGroup>
+
+### Database Commands
+
+<CodeGroup>
+```bash Access PostgreSQL shell
+make db-shell
+```
+
+```bash Reset database (removes all data)
+make db-reset
+```
+
+```bash View database logs
+make logs-db
+```
+</CodeGroup>
+
+## API Documentation
+
+Once the backend is running, you can access:
+
+- **Swagger UI**: `http://localhost:8080/swagger-ui.html`
+- **OpenAPI Spec**: `http://localhost:8080/v3/api-docs`
+
+## Code Quality
+
+### Backend
+
+The project uses **Spotless** with Google Java Format for code formatting:
+
+```bash
+# Apply formatting
+make backend-format
+
+# Check if formatting is needed
+make backend-format-check
+```
+
+<Note>
+  Always run `make backend-format` before committing to ensure consistent code style.
+</Note>
+
+### Frontend
+
+The frontend uses **ESLint** for linting:
+
+```bash
+npm run lint
+```
+
+## Testing
+
+### Backend Tests
+
+The backend uses **JUnit 5** and **Testcontainers** for integration testing:
+
+```bash
+make backend-test
+```
+
+Tests automatically spin up a PostgreSQL container for database testing.
+
+## Troubleshooting
+
+### Database Connection Issues
+
+If the backend can't connect to PostgreSQL:
+
+1. Ensure Docker containers are running: `make ps`
+2. Check database logs: `make logs-db`
+3. Verify environment variables in `.env`
+4. Try resetting the database: `make db-reset && make up`
+
+### Port Conflicts
+
+If ports `5432`, `8080`, or `3000` are already in use:
+
+1. Stop conflicting services
+2. Or modify the port numbers in `.env` and `docker-compose.yml`
+
+### Maven Build Issues
+
+If you encounter Maven build errors:
+
+```bash
+make backend-clean
+make backend-build
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="building" href="/development/architecture">
+    Learn about the hexagonal architecture
+  </Card>
+  <Card title="Tech Stack" icon="layer-group" href="/development/tech-stack">
+    Explore the technologies used
+  </Card>
+</CardGroup>

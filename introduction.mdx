@@ -1,0 +1,115 @@
+---
+title: Introduction
+description: Welcome to Hub - A comprehensive padel booking and match management platform
+---
+
+# Welcome to Hub
+
+Hub is a comprehensive platform for padel booking and match management that connects players, venue owners, and administrators in a seamless ecosystem.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get up and running with Hub in minutes
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/introduction">
+    Explore the complete REST API
+  </Card>
+  <Card title="Core Features" icon="star" href="/features/venues">
+    Discover what Hub can do
+  </Card>
+  <Card title="Development Guide" icon="hammer" href="/development/setup">
+    Set up your development environment
+  </Card>
+</CardGroup>
+
+## What is Hub?
+
+Hub is a full-stack SaaS platform designed to streamline padel court bookings, facilitate player matching, and provide comprehensive venue management tools. Whether you're a player looking for matches, a venue owner managing facilities, or an administrator overseeing platform operations, Hub provides the tools you need.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Venue Management" icon="building">
+    Create and manage padel venues with geospatial search capabilities powered by PostGIS
+  </Card>
+  <Card title="Smart Booking System" icon="calendar">
+    Book courts with integrated payment processing and automated confirmations
+  </Card>
+  <Card title="Player Matching" icon="users">
+    Find and connect with players for matches based on skill level and availability
+  </Card>
+  <Card title="Multi-Role Authentication" icon="shield">
+    Secure role-based access control for Players, Owners, and Administrators
+  </Card>
+  <Card title="Real-time Notifications" icon="bell">
+    Email notifications for bookings, matches, and important updates
+  </Card>
+  <Card title="Media Management" icon="image">
+    Upload and manage venue images with Cloudinary integration
+  </Card>
+  <Card title="Admin Dashboard" icon="chart-line">
+    Comprehensive analytics and statistics for platform oversight
+  </Card>
+  <Card title="Payment Processing" icon="credit-card">
+    Integrated payment handling with secure transaction processing
+  </Card>
+</CardGroup>
+
+## Technology Stack
+
+Hub is built with modern, production-ready technologies:
+
+- **Backend**: Spring Boot 3.5 with Java 21
+- **Frontend**: Next.js 16 with React 19 and TypeScript
+- **Database**: PostgreSQL with PostGIS for geospatial features
+- **Authentication**: Auth0 OAuth2
+- **Infrastructure**: Docker Compose for local development
+- **Media Storage**: Cloudinary
+- **Email**: Brevo API for transactional emails
+
+## User Roles
+
+Hub supports three distinct user roles, each with specific capabilities:
+
+<Accordion title="Players">
+  Players can search for venues, book courts, create and join match requests, manage their bookings, and receive notifications about their activities.
+</Accordion>
+
+<Accordion title="Venue Owners">
+  Venue owners can create and manage their venues, add resources (courts), view bookings for their facilities, upload venue images, and suspend or reactivate venues.
+</Accordion>
+
+<Accordion title="Administrators">
+  Administrators have platform-wide access to manage users, view comprehensive statistics, oversee all bookings, and perform administrative operations across the system.
+</Accordion>
+
+## Getting Started
+
+<Steps>
+  <Step title="Installation">
+    Follow our [installation guide](/installation) to set up Hub locally or in production
+  </Step>
+  <Step title="Configuration">
+    Configure your environment variables, database, and integrations
+  </Step>
+  <Step title="Authentication">
+    Set up Auth0 for secure user authentication
+  </Step>
+  <Step title="Start Building">
+    Explore the API or start using the platform
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="Quick Start Guide" icon="play" href="/quickstart">
+    Get Hub running quickly
+  </Card>
+  <Card title="Player Guide" icon="user" href="/guides/players">
+    Learn how to use Hub as a player
+  </Card>
+  <Card title="API Documentation" icon="book" href="/api/introduction">
+    Integrate with the Hub API
+  </Card>
+</CardGroup>

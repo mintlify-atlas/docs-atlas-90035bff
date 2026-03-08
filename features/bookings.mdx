@@ -1,0 +1,349 @@
+---
+title: Bookings
+description: Book courts, manage reservations, and handle payments in Hub
+---
+
+## Overview
+
+Bookings allow players to reserve court time at venues. Hub supports two types of bookings:
+
+1. **Direct Bookings**: Individual players booking courts for personal use
+2. **Match Bookings**: Court reservations created through the match system with split payments
+
+## Creating a Booking
+
+### Step-by-Step Booking Flow
+
+<Steps>
+  <Step title="Browse Venues">
+    Navigate to the dashboard and select a venue
+  </Step>
+  <Step title="Choose a Court">
+    Click on a specific court to view its availability
+  </Step>
+  <Step title="Select Date and Time">
+    Pick your preferred date and available time slot
+  </Step>
+  <Step title="Review Details">
+    Confirm court name, date, time, duration, and price
+  </Step>
+  <Step title="Complete Payment">
+    Process payment to confirm your booking
+  </Step>
+  <Step title="Receive Confirmation">
+    Get immediate confirmation and booking details
+  </Step>
+</Steps>
+
+### Booking Requirements
+
+<CardGroup cols={2}>
+  <Card title="Account Required" icon="user">
+    You must be logged in to make bookings
+  </Card>
+  <Card title="Real-Time Availability" icon="clock">
+    Slots are checked for availability at booking time
+  </Card>
+  <Card title="Immediate Payment" icon="credit-card">
+    Payment is required to hold the time slot
+  </Card>
+  <Card title="Confirmation Timeout" icon="hourglass">
+    Unpaid bookings expire after 30 minutes
+  </Card>
+</CardGroup>
+
+## Booking Status
+
+Understand what each booking status means:
+
+### Active Statuses
+
+<Accordion title="PENDING_PAYMENT">
+  **Description**: Booking created but payment not yet completed
+  
+  **What it means**:
+  - The time slot is temporarily held for you
+  - You have 30 minutes to complete payment
+  - The booking will automatically cancel if not paid
+  
+  **What you can do**:
+  - Complete payment to confirm
+  - Let it expire to release the slot
+</Accordion>
+
+<Accordion title="CONFIRMED">
+  **Description**: Payment completed and booking active
+  
+  **What it means**:
+  - Your court is reserved
+  - You can access the venue at the scheduled time
+  - The booking appears in your upcoming reservations
+  
+  **What you can do**:
+  - Cancel up to 24 hours before (get refund)
+  - View booking details
+  - Check in at the venue
+</Accordion>
+
+<Accordion title="PENDING_MATCH">
+  **Description**: Booking created for a match, waiting for all players to join
+  
+  **What it means**:
+  - Part of a match request system
+  - The organizer has paid their portion
+  - Waiting for other players to confirm
+  
+  **What you can do**:
+  - View match details
+  - Share invitation link
+  - Wait for match to fill
+</Accordion>
+
+### Final Statuses
+
+<Accordion title="CANCELLED">
+  **Description**: Booking was cancelled by player or admin
+  
+  **What it means**:
+  - The time slot is released
+  - Refund initiated if payment was made
+  - Appears in booking history
+  
+  **Why it happens**:
+  - Player cancelled (more than 24h before)
+  - Admin cancelled
+  - Payment timeout
+  - Match cancelled or expired
+</Accordion>
+
+## Managing Your Bookings
+
+### Viewing Your Bookings
+
+Access your bookings from the dashboard:
+
+1. Click on your profile menu
+2. Select "Mis Reservas"
+3. View bookings organized by status
+
+### Booking Dashboard Features
+
+<CardGroup cols={3}>
+  <Card title="Upcoming" icon="calendar">
+    View all confirmed future bookings sorted by date
+  </Card>
+  <Card title="History" icon="clock-rotate-left">
+    Access past bookings and cancelled reservations
+  </Card>
+  <Card title="All Bookings" icon="list">
+    See complete booking history with all statuses
+  </Card>
+</CardGroup>
+
+### Booking Information Display
+
+Each booking shows:
+
+- **Venue Name**: Where your court is located
+- **Court Name**: Which specific court is reserved
+- **Date**: Booking date in readable format
+- **Time**: Start and end time of your slot
+- **Price**: Amount paid including currency
+- **Status Badge**: Current booking status with icon
+- **Payment Status**: Payment state (Paid, Pending, Refunded)
+- **City**: Venue location for quick reference
+
+## Cancellation Policy
+
+### Player-Initiated Cancellation
+
+<Warning>
+  Bookings can only be cancelled **more than 24 hours** before the scheduled start time.
+</Warning>
+
+#### How to Cancel
+
+<Steps>
+  <Step title="Navigate to Bookings">
+    Go to "Mis Reservas" from your dashboard
+  </Step>
+  <Step title="Find Your Booking">
+    Locate the booking you want to cancel in the "Upcoming" tab
+  </Step>
+  <Step title="Click Cancel">
+    Click the "Cancelar" button on the booking card
+  </Step>
+  <Step title="Confirm Cancellation">
+    Review the cancellation notice and optionally provide a reason
+  </Step>
+  <Step title="Submit Request">
+    Confirm to process the cancellation and refund
+  </Step>
+</Steps>
+
+### Cancellation Restrictions
+
+<Note>
+  **24-Hour Policy**: Cancellations within 24 hours of the scheduled start time are not allowed to protect venue revenue and planning.
+</Note>
+
+If you try to cancel within 24 hours, you'll see:
+
+> "Bookings cannot be cancelled within 24 hours of the scheduled start time"
+
+### Refund Processing
+
+When you successfully cancel:
+
+- **Status** changes to `CANCELLED`
+- **Payment Status** updates to `REFUNDED`
+- **Refund** is initiated automatically
+- **Time Slot** is released for other players
+- **Email Notification** confirms the cancellation
+
+### Admin Cancellation
+
+Venue owners or administrators can cancel bookings at any time with a reason. Admin cancellations:
+
+- Issue automatic refunds for paid bookings
+- Include an explanation in the cancellation reason
+- Cannot be reversed
+
+## Payment System
+
+### Payment Methods
+
+Hub integrates with Stripe for secure payment processing:
+
+- **Credit/Debit Cards**: Visa, Mastercard, American Express
+- **Secure Processing**: PCI-compliant payment handling
+- **Immediate Confirmation**: Instant booking confirmation upon payment
+
+### Payment Status Tracking
+
+<CardGroup cols={2}>
+  <Card title="PENDING" icon="clock">
+    Payment has been initiated but not completed
+  </Card>
+  <Card title="PAID" icon="check-circle">
+    Payment successful, booking confirmed
+  </Card>
+  <Card title="FAILED" icon="times-circle">
+    Payment was unsuccessful, booking cancelled
+  </Card>
+  <Card title="REFUNDED" icon="rotate-left">
+    Payment returned due to cancellation
+  </Card>
+</CardGroup>
+
+### Booking Hold System
+
+When you initiate a booking:
+
+1. **Slot Reserved**: Time slot is temporarily held
+2. **30-Minute Timer**: You have 30 minutes to complete payment
+3. **Payment Page**: Redirected to secure payment interface
+4. **Auto-Expiry**: Unpaid bookings automatically cancel after 30 minutes
+5. **Slot Release**: Failed/expired bookings free the time slot immediately
+
+<Tip>
+  Complete payment promptly to secure your booking. High-demand slots may be taken by others if your payment expires.
+</Tip>
+
+## Match Bookings
+
+Match bookings work differently from direct bookings:
+
+### Split Payment System
+
+When creating a match:
+
+1. **Organizer Books**: Court is reserved with a match request
+2. **Organizer Pays First**: Pays their portion (e.g., 1/4 for 2v2)
+3. **Status**: Booking set to `PENDING_MATCH`
+4. **Players Join**: Other players join and pay their share
+5. **Match Confirms**: When full, booking moves to `CONFIRMED`
+6. **Payment Records**: Separate payment record for each player
+
+### Match Booking Lifecycle
+
+<Steps>
+  <Step title="Match Created">
+    Organizer creates match and booking enters PENDING_MATCH status
+  </Step>
+  <Step title="Organizer Pays">
+    Organizer completes their portion of the payment
+  </Step>
+  <Step title="Players Join">
+    Other players join the match and pay their shares
+  </Step>
+  <Step title="Match Full">
+    When all spots are filled, booking confirms automatically
+  </Step>
+  <Step title="Match Time">
+    Players show up and play at the scheduled time
+  </Step>
+</Steps>
+
+<Note>
+  If a match doesn't fill or is cancelled, the booking is automatically cancelled and all payments are refunded.
+</Note>
+
+## Booking Statistics
+
+Your booking dashboard shows quick stats:
+
+- **Upcoming Count**: Number of future confirmed bookings
+- **Total Confirmed**: All confirmed bookings (past and future)
+- **Total Cancelled**: Number of cancelled bookings
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Book Early" icon="clock">
+    Popular venues and times fill up quickly, especially evenings and weekends
+  </Card>
+  <Card title="Complete Payment Fast" icon="bolt">
+    Don't lose your slot - complete payment within 30 minutes
+  </Card>
+  <Card title="Check 24h Policy" icon="calendar-xmark">
+    Plan ahead to avoid non-refundable bookings
+  </Card>
+  <Card title="Save Payment Info" icon="credit-card">
+    Save cards in Stripe for faster checkout
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+### Common Issues
+
+<Accordion title="My booking expired before I could pay">
+  **Solution**: The 30-minute payment window ensures fair access to courts. Try booking again and complete payment immediately. Consider saving your payment method for faster checkout.
+</Accordion>
+
+<Accordion title="I can't cancel my booking">
+  **Check**: Are you within 24 hours of the start time? If yes, cancellation is not allowed per platform policy. Contact the venue directly for special circumstances.
+</Accordion>
+
+<Accordion title="Payment succeeded but booking shows pending">
+  **Solution**: Wait a few seconds and refresh the page. If the issue persists, check your email for confirmation. Payment webhooks may have a slight delay.
+</Accordion>
+
+<Accordion title="The slot shows available but booking fails">
+  **Reason**: Another player may have booked it just before you. Availability is checked in real-time at the moment of booking. Try selecting a different time slot.
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Find Venues" icon="map" href="/features/venues">
+    Discover venues and courts to book
+  </Card>
+  <Card title="Create Matches" icon="users" href="/features/matching">
+    Organize matches with split payments
+  </Card>
+  <Card title="Payment Setup" icon="credit-card" href="/features/payments">
+    Learn about payment processing and refunds
+  </Card>
+</CardGroup>

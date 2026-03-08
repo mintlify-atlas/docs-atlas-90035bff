@@ -1,0 +1,348 @@
+---
+title: 'Authentication Configuration'
+description: 'Configure Auth0 JWT authentication for the Hub platform'
+---
+
+## Overview
+
+Hub uses Auth0 for authentication and authorization. The backend validates JWT tokens issued by Auth0 and extracts user permissions for role-based access control.
+
+<Note>
+  The Hub platform implements OAuth 2.0 with JWT bearer tokens for stateless authentication.
+</Note>
+
+## Prerequisites
+
+Before configuring authentication, you need:
+
+- An Auth0 account
+- An Auth0 API configured for your application
+- Auth0 Application (SPA or Regular Web App) for your frontend
+
+## Auth0 Setup
+
+<Steps>
+  <Step title="Create Auth0 API">
+    1. Log in to your Auth0 dashboard
+    2. Navigate to **Applications** > **APIs**
+    3. Click **Create API**
+    4. Set a name (e.g., "Hub API") and identifier (e.g., `https://api.padelhub.com`)
+    5. Keep the signing algorithm as **RS256**
+  </Step>
+  
+  <Step title="Configure permissions">
+    In your Auth0 API, define permissions for different user roles:
+    
+    - `read:venues` - View venue information
+    - `write:venues` - Create and update venues
+    - `read:bookings` - View own bookings
+    - `write:bookings` - Create bookings
+    - `admin:all` - Full administrative access
+  </Step>
+  
+  <Step title="Create Auth0 Application">
+    1. Go to **Applications** > **Applications**
+    2. Click **Create Application**
+    3. Choose **Single Page Web Applications** (for React/Vue frontends)
+    4. Configure the following:
+       - **Allowed Callback URLs**: `http://localhost:3000/callback, https://app.padelhub.com/callback`
+       - **Allowed Logout URLs**: `http://localhost:3000, https://app.padelhub.com`
+       - **Allowed Web Origins**: `http://localhost:3000, https://app.padelhub.com`
+  </Step>
+  
+  <Step title="Get configuration values">
+    From your Auth0 dashboard, collect:
+    
+    - **Domain**: Found in your API settings (e.g., `padelhub.eu.auth0.com`)
+    - **Audience**: Your API identifier (e.g., `https://api.padelhub.com`)
+  </Step>
+</Steps>
+
+## Environment Configuration
+
+Set the following environment variables:
+
+<ParamField path="AUTH0_ISSUER" type="string" required>
+  Auth0 issuer URI for JWT validation
+  
+  **Format**: `https://YOUR_DOMAIN.auth0.com/`
+  
+  **Example**: `https://padelhub.eu.auth0.com/`
+  
+  <Warning>
+    Must include the trailing slash `/`
+  </Warning>
+</ParamField>
+
+<ParamField path="AUTH0_AUDIENCE" type="string" required>
+  Auth0 API audience identifier
+  
+  **Example**: `https://api.padelhub.com`
+  
+  This must exactly match the identifier you set when creating the Auth0 API.
+</ParamField>
+
+<CodeGroup>
+
+```bash .env
+AUTH0_ISSUER=https://padelhub.eu.auth0.com/
+AUTH0_AUDIENCE=https://api.padelhub.com
+```
+
+```yaml application.yaml
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${AUTH0_ISSUER}
+
+auth0:
+  audience: ${AUTH0_AUDIENCE}
+```
+
+</CodeGroup>
+
+## JWT Token Structure
+
+The backend expects JWT tokens with the following claims:
+
+```json JWT Token Claims
+{
+  "iss": "https://padelhub.eu.auth0.com/",
+  "sub": "auth0|6479e1234567890abcdef",
+  "aud": "https://api.padelhub.com",
+  "iat": 1678901234,
+  "exp": 1678987634,
+  "scope": "openid profile email",
+  "permissions": [
+    "read:venues",
+    "write:bookings",
+    "read:bookings"
+  ]
+}
+```
+
+### Key Claims
+
+- **iss** (Issuer): Auth0 domain, validated against `AUTH0_ISSUER`
+- **aud** (Audience): API identifier, validated against `AUTH0_AUDIENCE`
+- **sub** (Subject): Unique user identifier (Auth0 user ID)
+- **permissions**: Array of user permissions for authorization
+- **scope**: OAuth 2.0 scopes
+
+## Authorization Flow
+
+<Steps>
+  <Step title="User requests authentication">
+    Frontend redirects user to Auth0 login page with your application's client ID.
+  </Step>
+  
+  <Step title="User authenticates">
+    User logs in via Auth0 (username/password, social login, etc.).
+  </Step>
+  
+  <Step title="Auth0 issues tokens">
+    Auth0 returns an access token (JWT) and optional refresh token.
+  </Step>
+  
+  <Step title="Frontend includes token">
+    Frontend includes the JWT in the `Authorization` header:
+    ```
+    Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+    ```
+  </Step>
+  
+  <Step title="Backend validates token">
+    The backend:
+    1. Verifies the JWT signature using Auth0's public keys
+    2. Validates the issuer matches `AUTH0_ISSUER`
+    3. Validates the audience matches `AUTH0_AUDIENCE`
+    4. Checks token expiration
+    5. Extracts permissions for authorization
+  </Step>
+  
+  <Step title="User synchronized">
+    The `EnsureLocalUserFilter` ensures a local user record exists in the database, creating one if necessary.
+  </Step>
+</Steps>
+
+## Security Configuration
+
+The application implements several security measures:
+
+### CORS Configuration
+
+Allowed origins are configured based on `APP_FRONTEND_URL`:
+
+```java SecurityConfig.java
+config.setAllowedOrigins(List.of(
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  frontendUrl  // From APP_FRONTEND_URL
+));
+```
+
+<Warning>
+  Update `APP_FRONTEND_URL` to match your production frontend URL.
+</Warning>
+
+### HTTP Security Headers
+
+- **Content Security Policy**: `default-src 'self'; frame-ancestors 'none'`
+- **HSTS**: Enabled with 1-year max age and includeSubDomains
+- **Session Management**: Stateless (no server-side sessions)
+
+### Public Endpoints
+
+The following endpoints do not require authentication:
+
+- `/actuator/health` - Health check
+- `/v3/api-docs/**` - OpenAPI documentation (disable in production)
+- `/swagger-ui/**` - Swagger UI (disable in production)
+
+## Permission-Based Authorization
+
+Protect endpoints using Spring Security's method security:
+
+<CodeGroup>
+
+```java @PreAuthorize Annotation
+@PreAuthorize("hasAuthority('PERM_write:venues')")
+public VenueDto createVenue(CreateVenueRequest request) {
+    // Only users with 'write:venues' permission can access
+}
+```
+
+```java Multiple Permissions
+@PreAuthorize("hasAnyAuthority('PERM_admin:all', 'PERM_write:venues')")
+public VenueDto updateVenue(Long id, UpdateVenueRequest request) {
+    // Users with admin or write:venues permission
+}
+```
+
+```java Public Endpoint
+@GetMapping("/venues")
+public List<VenueDto> listVenues() {
+    // No @PreAuthorize - requires authentication but no specific permission
+}
+```
+
+</CodeGroup>
+
+<Note>
+  Permissions from the JWT are prefixed with `PERM_` by the `JwtAuthenticationConverter`.
+</Note>
+
+## Testing Authentication
+
+### Get a Test Token
+
+Use Auth0's test feature or implement a login flow in your frontend:
+
+```bash cURL Example
+curl -X POST https://padelhub.eu.auth0.com/oauth/token \
+  -H 'content-type: application/json' \
+  -d '{
+    "client_id":"YOUR_CLIENT_ID",
+    "client_secret":"YOUR_CLIENT_SECRET",
+    "audience":"https://api.padelhub.com",
+    "grant_type":"client_credentials"
+  }'
+```
+
+### Make Authenticated Request
+
+```bash Authenticated API Call
+curl -X GET http://localhost:8080/api/venues \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Expected Responses
+
+**Success (200 OK)**:
+```json
+{
+  "venues": [...]
+}
+```
+
+**Unauthorized (401)**:
+```json
+{
+  "error": "unauthorized",
+  "error_description": "Full authentication is required to access this resource"
+}
+```
+
+**Forbidden (403)**:
+```json
+{
+  "error": "access_denied",
+  "error_description": "Insufficient permissions"
+}
+```
+
+## Troubleshooting
+
+### Token Validation Failures
+
+<AccordionGroup>
+  <Accordion title="Invalid issuer">
+    **Error**: `The iss claim is not valid`
+    
+    **Solution**: Verify `AUTH0_ISSUER` matches your Auth0 domain exactly, including the trailing slash.
+  </Accordion>
+  
+  <Accordion title="Invalid audience">
+    **Error**: `The aud claim is not valid`
+    
+    **Solution**: Ensure `AUTH0_AUDIENCE` matches the API identifier in Auth0 exactly.
+  </Accordion>
+  
+  <Accordion title="Token expired">
+    **Error**: `Jwt expired at...`
+    
+    **Solution**: Tokens have a limited lifetime (typically 24 hours). Request a new token or implement token refresh.
+  </Accordion>
+  
+  <Accordion title="Missing permissions">
+    **Error**: `Access Denied` (403)
+    
+    **Solution**: Check that the user has the required permissions in Auth0. Permissions must be added to the JWT token.
+  </Accordion>
+</AccordionGroup>
+
+### Debugging Tips
+
+1. **Enable debug logging**:
+   ```yaml
+   logging:
+     level:
+       org.springframework.security: DEBUG
+   ```
+
+2. **Decode JWT tokens**: Use [jwt.io](https://jwt.io) to inspect token contents
+
+3. **Check Auth0 logs**: Review authentication logs in the Auth0 dashboard
+
+4. **Verify public keys**: Ensure the backend can access `https://YOUR_DOMAIN.auth0.com/.well-known/jwks.json`
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Database Configuration" icon="database" href="/configuration/database">
+    Set up PostgreSQL database
+  </Card>
+  <Card title="User Management" icon="users" href="/api/admin/users">
+    Manage users via API
+  </Card>
+  <Card title="Frontend Development" icon="code" href="/development/frontend/routing">
+    Frontend Auth0 integration
+  </Card>
+  <Card title="Environment Variables" icon="gear" href="/configuration/environment">
+    Configure Auth0 environment
+  </Card>
+</CardGroup>

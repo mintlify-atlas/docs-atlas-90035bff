@@ -1,0 +1,296 @@
+---
+title: 'Authentication'
+description: 'Authenticate with the Hub API using Auth0 OAuth2'
+---
+
+## Overview
+
+The Hub API uses **Auth0 OAuth2** for authentication and authorization. All API endpoints (except health checks and Swagger documentation) require a valid JWT access token.
+
+## Authentication Flow
+
+The API implements OAuth2 Resource Server pattern:
+
+1. **User authenticates** with Auth0 (via your frontend application)
+2. **Auth0 issues** a JWT access token
+3. **Client includes** the token in API requests
+4. **API validates** the token and extracts user identity
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Auth0
+    participant API
+    
+    User->>Frontend: Login
+    Frontend->>Auth0: Authentication Request
+    Auth0-->>Frontend: JWT Access Token
+    Frontend->>API: API Request + Bearer Token
+    API->>Auth0: Validate Token (JWKS)
+    Auth0-->>API: Token Valid
+    API-->>Frontend: API Response
+```
+
+## Token Validation
+
+The API validates JWT tokens using the following criteria:
+
+<ResponseField name="Issuer" type="string" required>
+  Must match the configured Auth0 issuer URI (`AUTH0_ISSUER`)
+</ResponseField>
+
+<ResponseField name="Audience" type="string" required>
+  Must include the configured audience (`AUTH0_AUDIENCE`)
+</ResponseField>
+
+<ResponseField name="Expiration" type="timestamp" required>
+  Token must not be expired
+</ResponseField>
+
+<ResponseField name="Signature" type="string" required>
+  Token signature must be valid (verified using Auth0's JWKS endpoint)
+</ResponseField>
+
+### Audience Validation
+
+The API implements custom audience validation to ensure tokens are intended for this API:
+
+```java
+// From: AudienceValidator.java
+public OAuth2TokenValidatorResult validate(Jwt jwt) {
+  if (jwt.getAudience() != null && jwt.getAudience().contains(audience)) {
+    return OAuth2TokenValidatorResult.success();
+  }
+  return OAuth2TokenValidatorResult.failure(
+    new OAuth2Error("invalid_token", "Missing required audience", null));
+}
+```
+
+## Making Authenticated Requests
+
+Include the JWT access token in the `Authorization` header using the Bearer scheme:
+
+<CodeGroup>
+```bash cURL
+curl -X GET https://api.yourdomain.com/api/bookings/my \
+  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const accessToken = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...';
+
+const response = await fetch('https://api.yourdomain.com/api/bookings/my', {
+  method: 'GET',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json'
+  }
+});
+
+const bookings = await response.json();
+```
+
+```python Python
+import requests
+
+access_token = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...'
+
+headers = {
+    'Authorization': f'Bearer {access_token}',
+    'Content-Type': 'application/json'
+}
+
+response = requests.get(
+    'https://api.yourdomain.com/api/bookings/my',
+    headers=headers
+)
+```
+</CodeGroup>
+
+## User Context
+
+Once authenticated, the API automatically:
+
+1. **Extracts user identity** from the JWT token
+2. **Creates or updates** local user profile (via `EnsureLocalUserFilter`)
+3. **Provides user context** to all endpoints through `CurrentUserProvider`
+
+The `sub` claim from the JWT is used as the user's unique identifier.
+
+## Configuration
+
+Configure Auth0 integration using these environment variables:
+
+<ParamField path="AUTH0_ISSUER" type="string" required>
+  Auth0 tenant issuer URI
+  
+  Example: `https://your-tenant.auth0.com/`
+</ParamField>
+
+<ParamField path="AUTH0_AUDIENCE" type="string" required>
+  API identifier configured in Auth0
+  
+  Example: `https://api.yourdomain.com`
+</ParamField>
+
+### Application Configuration
+
+From `application.yaml`:
+
+```yaml
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${AUTH0_ISSUER}
+
+auth0:
+  audience: ${AUTH0_AUDIENCE}
+```
+
+## Authorization
+
+The API implements role-based access control with the following roles:
+
+<CardGroup cols={2}>
+  <Card title="Player" icon="user">
+    Default role for authenticated users. Can create bookings, join matches, and manage own profile.
+  </Card>
+  <Card title="Venue Owner" icon="building">
+    Can create and manage venues, view venue bookings, and manage resources.
+  </Card>
+  <Card title="Admin" icon="shield">
+    Full access to all endpoints including user management and system statistics.
+  </Card>
+</CardGroup>
+
+### Endpoint Patterns
+
+- `/api/venues` - Public endpoints (authenticated required)
+- `/api/bookings/my` - Player endpoints (own resources)
+- `/api/owner/**` - Venue owner endpoints
+- `/api/admin/**` - Admin endpoints
+
+<Note>
+Role assignment is managed through Auth0 and extracted from JWT claims. Contact your Auth0 administrator to configure roles.
+</Note>
+
+## Security Features
+
+### Stateless Sessions
+
+The API uses stateless session management:
+
+```java
+http.sessionManagement(sm -> 
+  sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+```
+
+No server-side sessions are maintained - each request is authenticated independently.
+
+### Security Headers
+
+The API enforces security best practices:
+
+<ResponseField name="Content-Security-Policy">
+  `default-src 'self'; frame-ancestors 'none'`
+</ResponseField>
+
+<ResponseField name="Strict-Transport-Security">
+  `max-age=31536000; includeSubDomains`
+</ResponseField>
+
+### CSRF Protection
+
+CSRF protection is disabled since the API is stateless and uses Bearer token authentication:
+
+```java
+http.csrf(AbstractHttpConfigurer::disable)
+```
+
+## Public Endpoints
+
+The following endpoints do NOT require authentication:
+
+- `GET /actuator/health` - Health check
+- `GET /v3/api-docs/**` - OpenAPI documentation
+- `GET /swagger-ui/**` - Swagger UI
+
+## Error Responses
+
+### 401 Unauthorized
+
+Returned when authentication token is missing or invalid:
+
+```json
+{
+  "type": "/errors/unauthorized",
+  "title": "Unauthorized",
+  "status": 401,
+  "detail": "Authentication is required to access this resource",
+  "instance": "/api/bookings/my",
+  "timestamp": "2026-03-08T10:30:00Z"
+}
+```
+
+### 403 Forbidden
+
+Returned when authenticated user lacks permission:
+
+```json
+{
+  "type": "/errors/forbidden",
+  "title": "Forbidden",
+  "status": 403,
+  "detail": "You don't have permission to access this resource",
+  "instance": "/api/admin/users",
+  "timestamp": "2026-03-08T10:30:00Z"
+}
+```
+
+<Warning>
+Always store access tokens securely. Never expose tokens in client-side code or version control.
+</Warning>
+
+## Token Expiration
+
+JWT tokens expire after a configured period (set in Auth0). When a token expires:
+
+1. API returns `401 Unauthorized`
+2. Client should refresh the token using Auth0's refresh token flow
+3. Retry the request with the new access token
+
+## Testing Authentication
+
+For development and testing, you can obtain a token using Auth0's API:
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://your-tenant.auth0.com/oauth/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "audience": "https://api.yourdomain.com",
+    "grant_type": "client_credentials"
+  }'
+```
+</CodeGroup>
+
+<Note>
+For production applications, use the appropriate Auth0 SDK for your platform (Auth0 SPA SDK, Auth0 React, etc.)
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Error Handling" icon="triangle-exclamation" href="/api/errors">
+    Learn about error responses and status codes
+  </Card>
+  <Card title="API Endpoints" icon="code" href="/api/venues/management">
+    Explore available API endpoints
+  </Card>
+</CardGroup>

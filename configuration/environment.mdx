@@ -1,0 +1,284 @@
+---
+title: 'Environment Variables'
+description: 'Complete guide to configuring Hub platform environment variables'
+---
+
+## Overview
+
+The Hub platform uses environment variables for configuration management. This guide covers all required and optional environment variables for running the application.
+
+<Note>
+  All environment variables should be defined in your `.env` file or in your deployment environment.
+</Note>
+
+## Database Configuration
+
+<ParamField path="DB_HOST" type="string" required>
+  PostgreSQL database host address
+  
+  **Default**: `localhost`
+  
+  **Example**: `postgres` (for Docker), `db.example.com` (for production)
+</ParamField>
+
+<ParamField path="DB_PORT" type="string" required>
+  PostgreSQL database port
+  
+  **Default**: `5432`
+</ParamField>
+
+<ParamField path="DB_NAME" type="string" required>
+  Database name for the Hub application
+  
+  **Example**: `hub_db`, `padelhub_prod`
+</ParamField>
+
+<ParamField path="DB_USER" type="string" required>
+  Database username with read/write permissions
+  
+  **Example**: `hub_user`
+</ParamField>
+
+<ParamField path="DB_PASSWORD" type="string" required>
+  Database user password
+  
+  <Warning>
+    Store securely and never commit to version control
+  </Warning>
+</ParamField>
+
+<ParamField path="DB_SSL_MODE" type="string">
+  PostgreSQL SSL mode configuration
+  
+  **Default**: `disable`
+  
+  **Options**: `disable`, `require`, `verify-ca`, `verify-full`
+  
+  <Note>
+    Use `require` or higher for production environments
+  </Note>
+</ParamField>
+
+## Authentication (Auth0)
+
+<ParamField path="AUTH0_ISSUER" type="string" required>
+  Auth0 issuer URI for JWT token validation
+  
+  **Format**: `https://YOUR_DOMAIN.auth0.com/`
+  
+  **Example**: `https://padelhub.eu.auth0.com/`
+</ParamField>
+
+<ParamField path="AUTH0_AUDIENCE" type="string" required>
+  Auth0 API audience identifier
+  
+  **Example**: `https://api.padelhub.com`
+  
+  This value must match the audience configured in your Auth0 API settings.
+</ParamField>
+
+## Media Storage (Cloudinary)
+
+<ParamField path="CLOUDINARY_CLOUD_NAME" type="string" required>
+  Your Cloudinary cloud name
+  
+  **Example**: `padelhub-media`
+</ParamField>
+
+<ParamField path="CLOUDINARY_API_KEY" type="string" required>
+  Cloudinary API key for authentication
+</ParamField>
+
+<ParamField path="CLOUDINARY_API_SECRET" type="string" required>
+  Cloudinary API secret
+  
+  <Warning>
+    Keep this secret secure and never expose in client-side code
+  </Warning>
+</ParamField>
+
+## Email Service (Brevo)
+
+<ParamField path="BREVO_API_KEY" type="string" required>
+  Brevo (formerly Sendinblue) API key for transactional emails
+  
+  **Default**: `dummy-key-for-local` (development only)
+  
+  <Note>
+    For local development, the default dummy key will log emails without sending them
+  </Note>
+</ParamField>
+
+## Application Configuration
+
+<ParamField path="APP_FRONTEND_URL" type="string">
+  Frontend application URL for CORS and email links
+  
+  **Default**: `http://localhost:3000`
+  
+  **Production Example**: `https://app.padelhub.com`
+</ParamField>
+
+<ParamField path="APP_MAIL_FROM" type="string">
+  Sender email address for transactional emails
+  
+  **Default**: `noreply@padelhub.com`
+  
+  **Example**: `support@padelhub.com`
+</ParamField>
+
+<ParamField path="BACKEND_PORT" type="string">
+  Port mapping for the backend service (Docker)
+  
+  **Default**: `8080`
+</ParamField>
+
+<ParamField path="SWAGGER_ENABLED" type="boolean">
+  Enable/disable Swagger UI and OpenAPI documentation
+  
+  **Default**: `true`
+  
+  <Warning>
+    Set to `false` in production environments
+  </Warning>
+</ParamField>
+
+## PostgreSQL Container Configuration
+
+<ParamField path="POSTGRES_DB" type="string">
+  Initial database name (Docker only)
+  
+  This creates the database when the PostgreSQL container first starts.
+</ParamField>
+
+<ParamField path="POSTGRES_USER" type="string">
+  PostgreSQL superuser name (Docker only)
+</ParamField>
+
+<ParamField path="POSTGRES_PASSWORD" type="string">
+  PostgreSQL superuser password (Docker only)
+</ParamField>
+
+## Example Configuration
+
+<CodeGroup>
+
+```bash .env.example
+# Database
+DB_HOST=postgres
+DB_PORT=5432
+DB_NAME=hub_db
+DB_USER=hub_user
+DB_PASSWORD=your_secure_password
+DB_SSL_MODE=disable
+
+# PostgreSQL Container
+POSTGRES_DB=hub_db
+POSTGRES_USER=hub_user
+POSTGRES_PASSWORD=your_secure_password
+
+# Auth0
+AUTH0_ISSUER=https://your-tenant.auth0.com/
+AUTH0_AUDIENCE=https://api.yourdomain.com
+
+# Cloudinary
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+# Brevo Email
+BREVO_API_KEY=your_brevo_api_key
+
+# Application
+APP_FRONTEND_URL=http://localhost:3000
+APP_MAIL_FROM=noreply@padelhub.com
+BACKEND_PORT=8080
+
+# Development
+SWAGGER_ENABLED=true
+```
+
+```bash .env.production
+# Database
+DB_HOST=your-production-db-host.com
+DB_PORT=5432
+DB_NAME=hub_production
+DB_USER=hub_prod_user
+DB_PASSWORD=${SECRET_DB_PASSWORD}
+DB_SSL_MODE=require
+
+# Auth0
+AUTH0_ISSUER=https://your-tenant.auth0.com/
+AUTH0_AUDIENCE=https://api.padelhub.com
+
+# Cloudinary
+CLOUDINARY_CLOUD_NAME=padelhub-prod
+CLOUDINARY_API_KEY=${SECRET_CLOUDINARY_KEY}
+CLOUDINARY_API_SECRET=${SECRET_CLOUDINARY_SECRET}
+
+# Brevo Email
+BREVO_API_KEY=${SECRET_BREVO_KEY}
+
+# Application
+APP_FRONTEND_URL=https://app.padelhub.com
+APP_MAIL_FROM=noreply@padelhub.com
+BACKEND_PORT=8080
+
+# Production
+SWAGGER_ENABLED=false
+```
+
+</CodeGroup>
+
+## Security Best Practices
+
+<Steps>
+  <Step title="Never commit secrets">
+    Add `.env` to your `.gitignore` file. Use `.env.example` with placeholder values for documentation.
+  </Step>
+  
+  <Step title="Use environment-specific files">
+    Maintain separate configuration for development, staging, and production environments.
+  </Step>
+  
+  <Step title="Enable SSL for databases">
+    Set `DB_SSL_MODE=require` or higher for production databases.
+  </Step>
+  
+  <Step title="Rotate credentials regularly">
+    Implement a schedule for rotating database passwords and API keys.
+  </Step>
+  
+  <Step title="Use secrets management">
+    For production, use AWS Secrets Manager, HashiCorp Vault, or your cloud provider's secrets service.
+  </Step>
+  
+  <Step title="Disable debugging features">
+    Set `SWAGGER_ENABLED=false` in production to prevent API documentation exposure.
+  </Step>
+</Steps>
+
+## Validation
+
+The application validates required environment variables at startup. Missing or invalid variables will prevent the application from starting with clear error messages.
+
+<Note>
+  Use the health check endpoint `/actuator/health` to verify the application is running correctly with your configuration.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/configuration/authentication">
+    Configure Auth0 authentication
+  </Card>
+  <Card title="Database Setup" icon="database" href="/configuration/database">
+    Set up PostgreSQL with PostGIS
+  </Card>
+  <Card title="Integrations" icon="plug" href="/configuration/integrations">
+    Configure third-party services
+  </Card>
+  <Card title="Deployment" icon="rocket" href="/development/deployment/docker">
+    Deploy with Docker
+  </Card>
+</CardGroup>

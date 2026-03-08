@@ -1,0 +1,539 @@
+---
+title: 'Resources'
+description: 'Manage padel courts and other bookable resources'
+---
+
+# Owner Resources API
+
+Resources represent bookable items at your venue (typically padel courts). As an owner, you can create resources, configure their schedules, set pricing rules, and manage their operational status.
+
+## List All My Resources
+
+Retrieve all resources across all venues you own.
+
+<CodeGroup>
+```bash cURL
+curl -X GET https://api.hub.com/api/owner/resources \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.hub.com/api/owner/resources', {
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN'
+  }
+});
+const resources = await response.json();
+```
+</CodeGroup>
+
+### Response
+
+<ResponseField name="id" type="string (UUID)" required>
+  Unique identifier for the resource
+</ResponseField>
+
+<ResponseField name="venueId" type="string (UUID)" required>
+  ID of the venue this resource belongs to
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Resource name (e.g., "Court 1")
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Detailed description of the resource
+</ResponseField>
+
+<ResponseField name="type" type="string" required>
+  Resource type (e.g., PADEL_COURT, TENNIS_COURT)
+</ResponseField>
+
+<ResponseField name="slotDurationMinutes" type="integer" required>
+  Duration of each booking slot in minutes
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Resource status: ACTIVE, SUSPENDED, PENDING_APPROVAL, REJECTED
+</ResponseField>
+
+<ResponseField name="rejectReason" type="string">
+  Reason for rejection (if status is REJECTED)
+</ResponseField>
+
+<ResponseField name="schedules" type="array">
+  Array of weekly schedules defining opening hours
+</ResponseField>
+
+<ResponseField name="priceRules" type="array">
+  Array of pricing rules based on day type and time
+</ResponseField>
+
+<ResponseField name="images" type="array">
+  Array of resource images
+</ResponseField>
+
+<ResponseField name="createdAt" type="string (ISO 8601)" required>
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string (ISO 8601)" required>
+  Last update timestamp
+</ResponseField>
+
+---
+
+## Create Resource
+
+Create a new resource (court) at one of your venues.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.hub.com/api/owner/venues/{venueId}/resources \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Court 1",
+    "description": "Professional padel court with LED lighting",
+    "type": "PADEL_COURT",
+    "slotDurationMinutes": 90
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  `https://api.hub.com/api/owner/venues/${venueId}/resources`,
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      name: 'Court 1',
+      description: 'Professional padel court with LED lighting',
+      type: 'PADEL_COURT',
+      slotDurationMinutes: 90
+    })
+  }
+);
+const resource = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="venueId" type="string (UUID)" required>
+  ID of the venue to create the resource in
+</ParamField>
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Resource name (cannot be blank)
+</ParamField>
+
+<ParamField body="description" type="string">
+  Detailed description of the resource
+</ParamField>
+
+<ParamField body="type" type="string" required>
+  Resource type (PADEL_COURT, TENNIS_COURT, etc.)
+</ParamField>
+
+<ParamField body="slotDurationMinutes" type="integer" required>
+  Duration of each booking slot in minutes (typically 90 for padel)
+</ParamField>
+
+### Response
+
+Returns the created resource object with HTTP status 201 (Created).
+
+---
+
+## Set Schedule
+
+Define opening and closing times for a specific day of the week.
+
+<CodeGroup>
+```bash cURL
+curl -X PUT https://api.hub.com/api/owner/resources/{resourceId}/schedules \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dayOfWeek": "MONDAY",
+    "openingTime": "08:00:00",
+    "closingTime": "22:00:00"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  `https://api.hub.com/api/owner/resources/${resourceId}/schedules`,
+  {
+    method: 'PUT',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      dayOfWeek: 'MONDAY',
+      openingTime: '08:00:00',
+      closingTime: '22:00:00'
+    })
+  }
+);
+const resource = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  Resource ID to set schedule for
+</ParamField>
+
+### Request Body
+
+<ParamField body="dayOfWeek" type="string" required>
+  Day of week: MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY
+</ParamField>
+
+<ParamField body="openingTime" type="string (time)">
+  Opening time in HH:mm:ss format. Set to null to close on this day.
+</ParamField>
+
+<ParamField body="closingTime" type="string (time)">
+  Closing time in HH:mm:ss format. Set to null to close on this day.
+</ParamField>
+
+### Response
+
+Returns the updated resource object with the new schedule included.
+
+<Note>
+  To mark a day as closed, set both `openingTime` and `closingTime` to `null`. You need to set the schedule for each day of the week separately.
+</Note>
+
+---
+
+## Add Price Rule
+
+Add a pricing rule based on day type (weekday/weekend) and time range.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.hub.com/api/owner/resources/{resourceId}/price-rules \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dayType": "WEEKEND",
+    "startTime": "10:00:00",
+    "endTime": "14:00:00",
+    "price": 35.00,
+    "currency": "EUR"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  `https://api.hub.com/api/owner/resources/${resourceId}/price-rules`,
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      dayType: 'WEEKEND',
+      startTime: '10:00:00',
+      endTime: '14:00:00',
+      price: 35.00,
+      currency: 'EUR'
+    })
+  }
+);
+const resource = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  Resource ID to add price rule to
+</ParamField>
+
+### Request Body
+
+<ParamField body="dayType" type="string" required>
+  Day type: WEEKDAY or WEEKEND
+</ParamField>
+
+<ParamField body="startTime" type="string (time)" required>
+  Start time for this price rule (HH:mm:ss)
+</ParamField>
+
+<ParamField body="endTime" type="string (time)" required>
+  End time for this price rule (HH:mm:ss)
+</ParamField>
+
+<ParamField body="price" type="number" required>
+  Price for bookings in this time range
+</ParamField>
+
+<ParamField body="currency" type="string" required>
+  Currency code (e.g., EUR, USD)
+</ParamField>
+
+### Response
+
+Returns the updated resource object with the new price rule included.
+
+### Pricing Example
+
+```javascript
+// Peak hours on weekends
+{
+  "dayType": "WEEKEND",
+  "startTime": "10:00:00",
+  "endTime": "14:00:00",
+  "price": 35.00,
+  "currency": "EUR"
+}
+
+// Off-peak hours on weekdays
+{
+  "dayType": "WEEKDAY",
+  "startTime": "08:00:00",
+  "endTime": "16:00:00",
+  "price": 20.00,
+  "currency": "EUR"
+}
+
+// Evening hours on weekdays
+{
+  "dayType": "WEEKDAY",
+  "startTime": "16:00:00",
+  "endTime": "22:00:00",
+  "price": 28.00,
+  "currency": "EUR"
+}
+```
+
+---
+
+## Remove Price Rule
+
+Delete a specific pricing rule from a resource.
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE https://api.hub.com/api/owner/resources/{resourceId}/price-rules/{ruleId} \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  `https://api.hub.com/api/owner/resources/${resourceId}/price-rules/${ruleId}`,
+  {
+    method: 'DELETE',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  Resource ID
+</ParamField>
+
+<ParamField path="ruleId" type="string (UUID)" required>
+  Price rule ID to delete
+</ParamField>
+
+### Response
+
+Returns HTTP status 204 (No Content) on success.
+
+---
+
+## Suspend Resource
+
+Temporarily suspend a resource. Suspended resources cannot be booked.
+
+<CodeGroup>
+```bash cURL
+curl -X PATCH https://api.hub.com/api/owner/resources/{resourceId}/suspend \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  `https://api.hub.com/api/owner/resources/${resourceId}/suspend`,
+  {
+    method: 'PATCH',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  Resource ID to suspend
+</ParamField>
+
+### Response
+
+Returns HTTP status 204 (No Content) on success.
+
+---
+
+## Reactivate Resource
+
+Reactivate a previously suspended resource.
+
+<CodeGroup>
+```bash cURL
+curl -X PATCH https://api.hub.com/api/owner/resources/{resourceId}/reactivate \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  `https://api.hub.com/api/owner/resources/${resourceId}/reactivate`,
+  {
+    method: 'PATCH',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  Resource ID to reactivate
+</ParamField>
+
+### Response
+
+Returns HTTP status 204 (No Content) on success.
+
+---
+
+## Add Resource Image
+
+Add an image to a resource. Images should be uploaded to your CDN first.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.hub.com/api/owner/resources/{resourceId}/images \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://cdn.example.com/images/court-1.jpg",
+    "publicId": "court-1-photo-123"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  `https://api.hub.com/api/owner/resources/${resourceId}/images`,
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      url: 'https://cdn.example.com/images/court-1.jpg',
+      publicId: 'court-1-photo-123'
+    })
+  }
+);
+const resource = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  Resource ID to add image to
+</ParamField>
+
+### Request Body
+
+<ParamField body="url" type="string" required>
+  Full URL to the image (cannot be blank)
+</ParamField>
+
+<ParamField body="publicId" type="string" required>
+  Public identifier for the image (cannot be blank)
+</ParamField>
+
+### Response
+
+Returns the updated resource object with the new image included.
+
+---
+
+## Delete Resource Image
+
+Remove an image from a resource.
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE https://api.hub.com/api/owner/resources/{resourceId}/images/{imageId} \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  `https://api.hub.com/api/owner/resources/${resourceId}/images/${imageId}`,
+  {
+    method: 'DELETE',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  Resource ID
+</ParamField>
+
+<ParamField path="imageId" type="string (UUID)" required>
+  Image ID to delete
+</ParamField>
+
+### Response
+
+Returns HTTP status 200 (OK) on success.
+
+---
+
+## Resource Setup Workflow
+
+1. **Create the resource** with basic information
+2. **Set schedules** for each day of the week
+3. **Add price rules** for different time slots and day types
+4. **Add images** to showcase the court
+5. **Wait for approval** (new resources start in PENDING_APPROVAL status)
+
+<Note>
+  Resources must have both schedules and price rules configured before they can accept bookings. Ensure you set up the full weekly schedule and pricing structure after creating a resource.
+</Note>

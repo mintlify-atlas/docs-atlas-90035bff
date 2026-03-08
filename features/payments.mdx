@@ -1,0 +1,515 @@
+---
+title: Payments
+description: Secure payment processing, refunds, and billing in Hub
+---
+
+## Overview
+
+Hub uses Stripe to process all payments securely. Whether you're booking a court directly or joining a match with split payments, the platform ensures safe, transparent transactions.
+
+## Payment Integration
+
+### Stripe Payment System
+
+Hub integrates Stripe for:
+
+<CardGroup cols={2}>
+  <Card title="Secure Processing" icon="shield-check">
+    PCI-compliant payment handling with bank-level security
+  </Card>
+  <Card title="Multiple Methods" icon="credit-card">
+    Accept major credit cards, debit cards, and digital wallets
+  </Card>
+  <Card title="Instant Confirmation" icon="bolt">
+    Immediate booking confirmation upon successful payment
+  </Card>
+  <Card title="Automatic Refunds" icon="rotate-left">
+    Streamlined refund processing for cancellations
+  </Card>
+</CardGroup>
+
+### Supported Payment Methods
+
+- **Credit Cards**: Visa, Mastercard, American Express
+- **Debit Cards**: All major debit card brands
+- **Digital Wallets**: Apple Pay, Google Pay (where available)
+- **EUR Currency**: All transactions processed in Euros
+
+<Note>
+  Payment methods are securely stored by Stripe. Hub never directly handles or stores your card details.
+</Note>
+
+## Payment Types
+
+Hub supports two types of payments:
+
+### 1. Direct Booking Payments
+
+**Use Case**: When you book a court for yourself or your group
+
+**How it works**:
+<Steps>
+  <Step title="Select Court and Time">
+    Choose your desired venue, court, date, and time slot
+  </Step>
+  <Step title="Review Price">
+    See the full court cost for your selected duration
+  </Step>
+  <Step title="Complete Payment">
+    Pay the full amount to confirm your booking
+  </Step>
+  <Step title="Receive Confirmation">
+    Get instant confirmation and booking details
+  </Step>
+</Steps>
+
+**Payment Record**: One payment for the full booking amount
+
+### 2. Match Split Payments
+
+**Use Case**: When creating or joining a match to split costs
+
+**How it works**:
+<Steps>
+  <Step title="Organizer Creates Match">
+    Organizer selects format (1v1 or 2v2) and creates match request
+  </Step>
+  <Step title="Organizer Pays Share">
+    Organizer pays their portion (e.g., 25% for 2v2)
+  </Step>
+  <Step title="Players Join">
+    Other players join and each pays their share
+  </Step>
+  <Step title="Booking Confirms">
+    When all shares are paid, court booking is confirmed
+  </Step>
+</Steps>
+
+**Payment Records**: Separate payment for each player's share
+
+<Tip>
+  Split payments make it easy to play with people you just met - everyone pays their fair share independently.
+</Tip>
+
+## Payment Flow
+
+### Creating a Payment
+
+<Steps>
+  <Step title="Initiate Booking">
+    Click "Book" or "Create Match" on your chosen slot
+  </Step>
+  <Step title="Booking Created">
+    System creates a booking with PENDING_PAYMENT status
+  </Step>
+  <Step title="Payment Intent">
+    Stripe Payment Intent is created for the amount
+  </Step>
+  <Step title="Redirect to Checkout">
+    You're directed to Stripe's secure payment page
+  </Step>
+  <Step title="Enter Payment Details">
+    Provide card information or select saved payment method
+  </Step>
+  <Step title="Process Payment">
+    Stripe processes the transaction securely
+  </Step>
+  <Step title="Webhook Confirmation">
+    Stripe notifies Hub of successful payment
+  </Step>
+  <Step title="Booking Confirmed">
+    Status updates to CONFIRMED, you receive confirmation
+  </Step>
+</Steps>
+
+### Payment Timeout
+
+<Warning>
+  You have **30 minutes** to complete payment after initiating a booking. After this time:
+  - The booking automatically cancels
+  - The payment intent expires
+  - The time slot is released for other users
+</Warning>
+
+## Payment Status
+
+Track your payment state through these statuses:
+
+### PENDING
+
+**Meaning**: Payment initiated but not yet completed
+
+**What happens**:
+- Payment Intent created with Stripe
+- 30-minute timer starts
+- Time slot temporarily held
+- Booking shows as PENDING_PAYMENT
+
+**What to do**: Complete payment on the payment page
+
+### PAID
+
+**Meaning**: Payment successful
+
+**What happens**:
+- Booking status changes to CONFIRMED
+- Confirmation email sent
+- Time slot secured
+- Payment record marked as PAID
+
+**What to do**: Show up at your scheduled time!
+
+### FAILED
+
+**Meaning**: Payment was unsuccessful
+
+**What happens**:
+- Booking automatically cancelled
+- Time slot released
+- No charges to your card
+- Error message displayed
+
+**Common reasons**:
+- Insufficient funds
+- Card declined by bank
+- Incorrect card details
+- Network timeout
+
+**What to do**: Try again with a different payment method
+
+### REFUNDED
+
+**Meaning**: Payment was returned to you
+
+**What happens**:
+- Original payment reversed
+- Funds returned to source payment method
+- Booking marked as CANCELLED
+- Refund confirmation email sent
+
+**Timeline**: Refunds typically process within 5-10 business days
+
+## Refund System
+
+### Automatic Refunds
+
+Refunds are processed automatically in these scenarios:
+
+<Accordion title="Player Cancellation (>24h before)">
+  **Trigger**: Player cancels booking more than 24 hours before start time
+  
+  **Process**:
+  1. Player clicks "Cancel" and confirms
+  2. Booking status changes to CANCELLED
+  3. Payment status updates to REFUNDED
+  4. Stripe refund initiated automatically
+  5. Funds return to original payment method
+  
+  **Timeline**: 5-10 business days
+</Accordion>
+
+<Accordion title="Admin Cancellation">
+  **Trigger**: Venue owner or admin cancels a booking
+  
+  **Process**:
+  1. Admin/owner cancels with reason
+  2. System checks if booking was paid
+  3. Automatic refund issued if payment exists
+  4. Player notified of cancellation and refund
+  
+  **Timeline**: 5-10 business days
+</Accordion>
+
+<Accordion title="Match Cancellation">
+  **Trigger**: Match doesn't fill, expires, or is cancelled
+  
+  **Process**:
+  1. Match status changes to CANCELLED or EXPIRED
+  2. System identifies all payments for the match
+  3. Each player's payment refunded individually
+  4. All players notified
+  
+  **Timeline**: 5-10 business days
+</Accordion>
+
+<Accordion title="Payment Timeout">
+  **Trigger**: Payment not completed within 30 minutes
+  
+  **Process**:
+  1. System detects expired payment timer
+  2. Booking automatically cancelled
+  3. Payment Intent cancelled (no charge occurs)
+  4. Time slot released
+  
+  **Timeline**: Immediate (no actual charge to refund)
+</Accordion>
+
+### Refund Timeline
+
+<Steps>
+  <Step title="Refund Initiated (Instant)">
+    Hub immediately processes refund request with Stripe
+  </Step>
+  <Step title="Stripe Processing (1-2 days)">
+    Stripe confirms refund and sends to card issuer
+  </Step>
+  <Step title="Bank Processing (3-8 days)">
+    Your bank processes the return to your account
+  </Step>
+  <Step title="Funds Available (5-10 days total)">
+    Refunded amount appears in your account
+  </Step>
+</Steps>
+
+<Note>
+  Refund timing depends on your bank's processing speed. International cards may take slightly longer.
+</Note>
+
+## Pricing Structure
+
+### How Court Prices Work
+
+Venue owners set flexible pricing using rules:
+
+**Dynamic Pricing Factors**:
+- **Day Type**: Weekday vs. Weekend
+- **Time of Day**: Morning, afternoon, evening, night
+- **Court Type**: Different sports and court qualities
+- **Duration**: Longer sessions may have different rates
+
+**Example Pricing Rule**:
+```
+Weekday, 18:00-22:00 (Peak Evening): €40/90min
+Weekend, 10:00-14:00 (Morning): €35/90min  
+Weekday, 14:00-17:00 (Afternoon): €25/90min
+```
+
+### Price Display
+
+Prices are shown:
+- **Court Card**: Price range across all pricing rules
+- **Availability Calendar**: Exact price for each specific slot
+- **Booking Confirmation**: Final price before payment
+- **Match Creation**: Price per player after splitting
+
+<Tip>
+  Book off-peak times (weekday afternoons) for better prices!
+</Tip>
+
+## Split Payment Details
+
+### How Splitting Works
+
+**2v2 Match Example**:
+```
+Court Cost: €40 for 90 minutes
+Total Players: 4
+Cost Per Player: €40 ÷ 4 = €10
+
+Payments:
+- Organizer: €10 (paid when creating match)
+- Player 2: €10 (paid when joining)
+- Player 3: €10 (paid when joining)  
+- Player 4: €10 (paid when joining)
+
+Total Collected: €40
+```
+
+**1v1 Match Example**:
+```
+Court Cost: €30 for 60 minutes
+Total Players: 2
+Cost Per Player: €30 ÷ 2 = €15
+
+Payments:
+- Organizer: €15 (paid when creating match)
+- Player 2: €15 (paid when joining)
+
+Total Collected: €30
+```
+
+### Split Payment Records
+
+For match bookings:
+- **Separate Records**: Each player has their own payment record
+- **Player ID Tracking**: Payments linked to specific players
+- **Individual Refunds**: If match cancels, each player refunded separately
+- **Transparent History**: Everyone sees only their own payment
+
+## Payment Security
+
+### Security Measures
+
+<CardGroup cols={2}>
+  <Card title="PCI Compliance" icon="shield-halved">
+    Stripe is PCI DSS Level 1 certified - highest security standard
+  </Card>
+  <Card title="No Card Storage" icon="database">
+    Hub never stores your card details - Stripe handles all sensitive data
+  </Card>
+  <Card title="Encrypted Transmission" icon="lock">
+    All payment data encrypted with TLS 1.3 during transmission
+  </Card>
+  <Card title="Fraud Detection" icon="user-shield">
+    Stripe's machine learning prevents fraudulent transactions
+  </Card>
+</CardGroup>
+
+### What Hub Stores
+
+**Hub Database Contains**:
+- Payment ID (internal reference)
+- Stripe Payment Intent ID (for tracking)
+- Amount and currency
+- Payment status
+- Booking reference
+- Player ID (for match splits)
+- Timestamps
+
+**Hub Does NOT Store**:
+- Card numbers
+- CVV/CVC codes  
+- Card expiration dates
+- Billing addresses
+- Any PCI-sensitive data
+
+<Warning>
+  Never share your full card details via email or messaging. Always use the official payment page.
+</Warning>
+
+## Billing and Receipts
+
+### Payment Confirmation
+
+After successful payment, you receive:
+
+1. **Confirmation Email**: Sent immediately to your registered email
+2. **Booking Details**: Venue, court, date, time, and payment amount
+3. **Stripe Receipt**: Official receipt from Stripe (separate email)
+4. **Dashboard Record**: Visible in your bookings history
+
+### Viewing Payment History
+
+Access your payment records:
+
+<Steps>
+  <Step title="Navigate to Bookings">
+    Go to "Mis Reservas" from your dashboard
+  </Step>
+  <Step title="Select Any Booking">
+    Click on any booking to view details
+  </Step>
+  <Step title="View Payment Info">
+    See payment amount, status, and date
+  </Step>
+  <Step title="Download Receipt">
+    Check your email for Stripe receipt PDF
+  </Step>
+</Steps>
+
+## Troubleshooting Payments
+
+<Accordion title="Payment failed - what should I do?">
+  **Immediate Steps**:
+  1. Check that you have sufficient funds
+  2. Verify card details are correct
+  3. Try a different payment method
+  4. Contact your bank if card keeps declining
+  
+  **Common Causes**:
+  - Card expired or cancelled
+  - Daily spending limit reached
+  - International transactions blocked
+  - 3D Secure authentication failed
+</Accordion>
+
+<Accordion title="I paid but booking shows pending">
+  **What to check**:
+  1. Wait 1-2 minutes for webhook processing
+  2. Refresh the page
+  3. Check your email for confirmation
+  4. Look in your booking history
+  
+  **If still pending after 5 minutes**: Contact support with your booking ID and payment receipt.
+</Accordion>
+
+<Accordion title="I was charged but booking was cancelled">
+  **What happened**: Likely a timing issue where the booking expired just as you completed payment.
+  
+  **Resolution**: Refund will be automatically processed within 5-10 business days. Check your email for refund confirmation.
+</Accordion>
+
+<Accordion title="My refund hasn't arrived">
+  **Timeline**: Allow 5-10 business days from refund initiation.
+  
+  **Check these**:
+  1. Look for refund confirmation email from Stripe
+  2. Verify refund was sent to correct card
+  3. Contact your bank to check pending transactions
+  4. If >10 days, contact support with booking reference
+</Accordion>
+
+<Accordion title="Can I change my payment method after booking?">
+  **Answer**: No. Once a booking is paid, the payment is final.
+  
+  **Alternative**: Cancel the booking (if >24h before) to get a refund, then rebook with the new payment method.
+</Accordion>
+
+<Accordion title="Will I be charged if I don't pay within 30 minutes?">
+  **Answer**: No. The Payment Intent expires and no charge occurs. You can simply create a new booking if the slot is still available.
+</Accordion>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Save Payment Method" icon="bookmark">
+    Save your card in Stripe for faster checkout on future bookings
+  </Card>
+  <Card title="Enable 3D Secure" icon="shield-check">
+    Ensure your bank's 3D Secure is enabled for secure online transactions
+  </Card>
+  <Card title="Check Email" icon="envelope">
+    Always check confirmation emails for payment receipts
+  </Card>
+  <Card title="Book Quickly" icon="clock">
+    Complete payment promptly to secure high-demand slots
+  </Card>
+</CardGroup>
+
+## For Venue Owners
+
+### Receiving Payments
+
+Venue owners receive payouts for bookings:
+
+- **Platform Processing**: Hub processes all payments centrally
+- **Payout Schedule**: Weekly or monthly payouts (configured by admin)
+- **Payment Reconciliation**: Dashboard shows all bookings and revenue
+- **Automatic Refund Handling**: Refunds deducted from next payout
+
+### Pricing Configuration
+
+Owners configure pricing through:
+
+1. **Price Rules**: Create rules for different days and times
+2. **Day Types**: Set weekday vs. weekend rates
+3. **Time Slots**: Define peak and off-peak pricing
+4. **Currency**: All transactions in EUR
+
+<Note>
+  Venue owners can view revenue reports but cannot process individual payments. All transactions are automated.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Make a Booking" icon="calendar-check" href="/features/bookings">
+    Learn about the booking process and cancellation policies
+  </Card>
+  <Card title="Join Matches" icon="users" href="/features/matching">
+    Understand how split payments work in the match system
+  </Card>
+  <Card title="Find Venues" icon="map" href="/features/venues">
+    Explore venues and their pricing
+  </Card>
+</CardGroup>
