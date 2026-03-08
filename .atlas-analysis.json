@@ -133,7 +133,7 @@
   "keyFeatures": [
     "Venue booking and management system",
     "Player match-making and matching requests",
-    "Payment processing with Stripe integration",
+    "Payment processing integration",
     "Geospatial venue search with PostGIS",
     "Multi-role authentication (Player, Owner, Admin)",
     "Email notifications for bookings and matches",

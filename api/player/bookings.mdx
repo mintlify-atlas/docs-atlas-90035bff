@@ -173,7 +173,7 @@ POST /api/bookings
 </ResponseField>
 
 <ResponseField name="clientSecret" type="string" required>
-  Payment client secret for completing the payment (Stripe integration)
+  Payment client secret for completing the payment
 </ResponseField>
 
 ### Example Request
@@ -237,7 +237,7 @@ fetch('https://api.hub.example.com/api/bookings', {
 ```
 
 <Note>
-  The `clientSecret` should be used with your payment provider (Stripe) to complete the payment process. The booking will expire after 15 minutes if payment is not completed.
+  The `clientSecret` should be used with your payment provider to complete the payment process. The booking will expire after 15 minutes if payment is not completed.
 </Note>
 
 ---
