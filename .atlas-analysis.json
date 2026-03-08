@@ -1,0 +1,160 @@
+{
+  "projectType": "saas",
+  "projectName": "Hub",
+  "projectDescription": "A comprehensive padel booking and match management platform with venue management, player matching, and payment processing",
+  "theme": "palm",
+  "primaryColor": "#0EA5E9",
+  "lightColor": "#7DD3FC",
+  "darkColor": "#0369A1",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/venues",
+              "features/bookings",
+              "features/matching",
+              "features/payments"
+            ]
+          },
+          {
+            "group": "User Guides",
+            "pages": [
+              "guides/players",
+              "guides/venue-owners",
+              "guides/administrators"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/environment",
+              "configuration/authentication",
+              "configuration/database",
+              "configuration/integrations"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/introduction",
+              "api/authentication",
+              "api/errors"
+            ]
+          },
+          {
+            "group": "Player Endpoints",
+            "pages": [
+              "api/player/bookings",
+              "api/player/matches",
+              "api/player/profile"
+            ]
+          },
+          {
+            "group": "Venue Endpoints",
+            "pages": [
+              "api/venues/management",
+              "api/venues/resources",
+              "api/venues/search"
+            ]
+          },
+          {
+            "group": "Owner Endpoints",
+            "pages": [
+              "api/owner/venues",
+              "api/owner/bookings",
+              "api/owner/resources"
+            ]
+          },
+          {
+            "group": "Admin Endpoints",
+            "pages": [
+              "api/admin/users",
+              "api/admin/statistics",
+              "api/admin/bookings"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "development/setup",
+              "development/architecture",
+              "development/tech-stack"
+            ]
+          },
+          {
+            "group": "Backend",
+            "pages": [
+              "development/backend/modules",
+              "development/backend/domain-model",
+              "development/backend/database"
+            ]
+          },
+          {
+            "group": "Frontend",
+            "pages": [
+              "development/frontend/structure",
+              "development/frontend/components",
+              "development/frontend/routing"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "development/deployment/docker",
+              "development/deployment/production"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Venue booking and management system",
+    "Player match-making and matching requests",
+    "Payment processing with Stripe integration",
+    "Geospatial venue search with PostGIS",
+    "Multi-role authentication (Player, Owner, Admin)",
+    "Email notifications for bookings and matches",
+    "Media management with Cloudinary",
+    "Admin dashboard with analytics"
+  ],
+  "publicApiSurface": [
+    "GET /api/venues - List active venues",
+    "GET /api/venues/{id} - Get venue details",
+    "GET /api/venues/nearby - Find venues near location",
+    "POST /api/bookings - Create booking",
+    "GET /api/bookings/my - Get my bookings",
+    "PATCH /api/bookings/{id}/cancel - Cancel booking",
+    "POST /api/match-requests - Create match request",
+    "GET /api/match-requests/search - Search available match slots",
+    "POST /api/match-requests/{id}/join - Join match request",
+    "GET /api/me - Get current user profile",
+    "POST /api/owner/venues - Create venue (owner)",
+    "GET /api/owner/bookings - Get venue bookings (owner)",
+    "POST /api/owner/resources - Create resource (owner)",
+    "GET /api/admin/stats - Get platform statistics (admin)",
+    "GET /api/admin/users - List users (admin)"
+  ]
+}
